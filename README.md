@@ -1,146 +1,103 @@
 # Security Checkup
 
-A small desktop app that looks at **your own computer** and tells you, in plain English, what's safe and what to fix.
-It works on **Mac, Windows and Linux**. It only **reads** your settings and never changes anything.
+This app checks if your computer is safe. If something is wrong, it tells you how to fix it.
+
+It works on Mac, Windows and Linux. It only looks. It does not change anything.
 
 ---
 
-## What it checks right now
+## How to use it
 
-| Check | What it means |
-|---|---|
-| Disk encryption | If your laptop is stolen, can someone read your files? (FileVault / BitLocker / LUKS) |
+### Step 1: Get Node.js (only the first time)
 
-More checks get added one step at a time. See [Roadmap](#roadmap) at the bottom.
+Node.js is a free helper that the app needs.
 
----
+1. Go to **nodejs.org**
+2. Click the big green button
+3. Open the file you got. Click **Next** until it is done.
 
-## Option A: just run it (no coding)
+### Step 2: Open the command window
 
-> Ready-made downloads come later. For now, use **Option B**. It takes about 5 minutes.
+This is a window where you type commands.
 
----
+- **Mac:** press `Cmd + Space`. Type **terminal**. Press Enter.
+- **Windows:** press the Windows key. Type **powershell**. Press Enter.
+- **Linux:** open the app called **Terminal**.
 
-## Option B: run it from this folder
+### Step 3: Go to this folder
 
-You only do steps 1 and 2 **once**. After that, it's just step 3.
+Type `cd` and then a space. Drag this folder into the window. Press Enter.
 
-### 1. Install Node.js
+### Step 4: Get the app ready (only the first time)
 
-Node.js is the free tool that runs this app.
+Type this and press Enter:
 
-1. Go to **https://nodejs.org**
-2. Click the big green button that says **LTS**
-3. Open the file you downloaded and click **Next / Continue** until it's done
-4. Check it worked:
-   - **Mac:** open the **Terminal** app (press `Cmd + Space`, type `terminal`, press Enter)
-   - **Windows:** open **PowerShell** (press the Windows key, type `powershell`, press Enter)
-   - **Linux:** open your **Terminal**
-5. Type this and press Enter:
+```bash
+npm install
+```
 
-   ```bash
-   node -v
-   ```
+Wait until it stops. Yellow words are okay.
 
-   You should see a number like `v22.0.0`. Any number is fine.
-   If it says "not found", close the window, open it again, and retry.
+### Step 5: Start the app
 
-### 2. Get the app's parts
-
-1. In the same Terminal / PowerShell window, go into this folder.
-   Type `cd ` (with a space after it), then **drag this folder** into the window, then press Enter.
-2. Type this and press Enter:
-
-   ```bash
-   npm install
-   ```
-
-   This downloads what the app needs. It can take a minute. Warnings in yellow are normal.
-
-### 3. Start the app
+Type this and press Enter:
 
 ```bash
 npm start
 ```
 
-The first time, it may download a little more (one time only). Then a window opens.
+The app opens. Click **run checkup**.
 
-Click **run checkup**. You'll see:
+- Green means good
+- Yellow means okay
+- Red means you should fix it
 
-- a **score** from 0 to 100 (green = good, yellow = okay, red = fix soon)
-- a list of checks with a colored dot
-- click any check to see **why it matters** and **how to fix it**
+Click on anything in the list to see how to fix it.
 
-To close the app, just close the window. (In Terminal, `Ctrl + C` also stops it.)
+**Next time:** only do Step 2, Step 3 and Step 5.
 
 ---
 
-## Make a real app you can double-click
+## Help
 
-This turns the project into a normal installer you can share.
-Run it **on the same kind of computer** you're building for (build the Mac app on a Mac, etc.).
+- **It says "command not found":** close the window and open it again. Try again. If it still does not work, do Step 1 again.
+- **You see red words after `npm install`:** you are in the wrong folder. Do Step 3 again.
+- **Something says "unknown":** the app could not check that thing. It does not lower your score.
+
+---
+
+## Make an app you can click on (you can skip this)
+
+Type this and press Enter:
 
 ```bash
 npm run dist
 ```
 
-When it finishes, open the new **dist** folder:
+A new folder called **dist** shows up. Your app is in there.
 
-| Computer | File you get | How to open it |
-|---|---|---|
-| Mac | `Security Checkup-x.x.x.dmg` | Double-click, drag the app into **Applications** |
-| Windows | `Security Checkup Setup x.x.x.exe` | Double-click and follow the steps |
-| Linux | `Security Checkup-x.x.x.AppImage` | Right-click → Properties → allow "run as program", then double-click |
+Your computer may say it does not know who made the app. That is okay.
 
-**"Unknown developer" warning?** That's normal for apps that aren't paid-signed.
-
-- **Mac:** right-click the app → **Open** → **Open**
-- **Windows:** click **More info** → **Run anyway**
+- **Mac:** right-click the app. Click **Open**. Click **Open** again.
+- **Windows:** click **More info**. Then click **Run anyway**.
 
 ---
 
-## Something went wrong?
+## What it checks
 
-| Problem | Fix |
-|---|---|
-| `npm: command not found` | Node.js isn't installed, or you need to close and reopen Terminal. Go back to step 1. |
-| `npm install` shows red errors | Make sure you're inside this folder (step 2.1), then try again. |
-| A check says **unknown** | The app couldn't read that setting. Click it to see why. It doesn't count against your score. |
-| Window is blank | Close it and run `npm start` again. |
-
----
-
-## How it's built (for the curious)
-
-```
-checks/          one file per check, written in plain yaml (no code)
-src/engine.js    loads checks, runs them, scores the results
-src/probes/      the actual "look at the computer" code, one file per os
-src/main.js      opens the window
-ui/              what you see (html, css, js)
-```
-
-To add a check, you add a `.yaml` file to `checks/` and a matching function in each `src/probes/` file.
-
----
-
-## Roadmap
-
-Built one step at a time. Each step adds one feature.
-
-- [x] **Step 1:** app window, check engine, scoring, disk encryption
-- [ ] Step 2: firewall
-- [ ] Step 3: os updates current
-- [ ] Step 4: automatic updates on
-- [ ] Step 5: antivirus active
-- [ ] Step 6: screen lock timeout
-- [ ] Step 7: daily user is not admin
-- [ ] Step 8: listening ports
-- [ ] Step 9: remote access exposed
-- [ ] Step 10: startup items
-- [ ] Step 11: secure boot / system integrity
-- [ ] Step 12: guest / unused accounts
-- [ ] Step 13: browser extensions
-- [ ] Step 14: save reports (html / json)
-- [ ] Step 15: history and "what changed" (drift)
-- [ ] Step 16: known-vulnerable software
+- [x] Are your files locked if someone steals your computer?
+- [ ] Is your wall against bad internet traffic turned on?
+- [ ] Is your computer up to date?
+- [ ] Does it update by itself?
+- [ ] Is virus protection on?
+- [ ] Does your screen lock when you walk away?
+- [ ] Are you using a normal account, not the boss account?
+- [ ] Are there open doors for the internet to get in?
+- [ ] Can other people control your computer from far away?
+- [ ] What apps start when your computer turns on?
+- [ ] Is your computer safe when it starts up?
+- [ ] Are there extra accounts you don't use?
+- [ ] Are your browser add-ons safe?
+- [ ] Save your results
+- [ ] What changed since last time?
+- [ ] Do you have old apps that are not safe?
