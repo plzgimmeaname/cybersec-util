@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'">
+  <title>security checkup</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>security checkup</h1>
+        <p id="machine" class="muted">…</p>
+      </div>
+      <button id="scan">run checkup</button>
+    </header>
+
+    <section id="summary" hidden>
+      <div id="score" class="score"><span id="score-num">–</span></div>
+      <div>
+        <p id="verdict"></p>
+        <p id="counts" class="muted"></p>
+      </div>
+    </section>
+
+    <p id="empty" class="muted">press run checkup to look at this computer. nothing is changed, it only reads.</p>
+
+    <ul id="results"></ul>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

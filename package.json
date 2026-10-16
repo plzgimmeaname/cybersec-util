@@ -1,0 +1,43 @@
+{
+  "name": "security-checkup",
+  "productName": "Security Checkup",
+  "version": "0.1.0",
+  "description": "checks the security of your own computer and tells you what to fix",
+  "main": "src/main.js",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder",
+    "dist:mac": "electron-builder --mac",
+    "dist:win": "electron-builder --win",
+    "dist:linux": "electron-builder --linux"
+  },
+  "build": {
+    "appId": "com.cybersecutil.checkup",
+    "productName": "Security Checkup",
+    "files": [
+      "src/**",
+      "ui/**",
+      "checks/**",
+      "package.json"
+    ],
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.utilities"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage",
+      "category": "Utility"
+    }
+  },
+  "dependencies": {
+    "js-yaml": "^5.5.0"
+  },
+  "devDependencies": {
+    "electron": "^44.8.0",
+    "electron-builder": "^26.15.3"
+  }
+}

@@ -1,0 +1,27 @@
+# if your laptop is lost or stolen, encryption keeps your files unreadable
+id: disk-encryption
+title: disk encryption
+why: without it, anyone holding your computer can read every file on it
+platforms: [windows, macos, linux]
+severity: critical
+probe: disk_encryption_status
+expect:
+  status: "on"
+benchmark: cis 3.11 / nist sc-28
+
+fix:
+  macos:
+    - open system settings → privacy & security
+    - scroll to filevault and click turn on
+    - save the recovery key somewhere safe (not on this mac)
+    - leave the mac plugged in until it finishes
+  windows:
+    - open settings → privacy & security → device encryption (or search "manage bitlocker")
+    - turn it on for the c drive
+    - save the recovery key to your microsoft account, a usb stick, or print it
+    - windows home may only offer "device encryption"; that counts too
+  linux:
+    - encrypting an existing install usually means reinstalling
+    - back up your files first
+    - during install, choose "encrypt the new installation" (luks)
+    - write the passphrase down and keep it safe
