@@ -1,3 +1,4 @@
+const fs = require('fs')
 const sh = require('./sh')
 
 // root is encrypted if any device under it is a luks "crypt" layer
@@ -15,4 +16,20 @@ async function disk_encryption_status () {
     : { status: 'off', detail: `root (${dev}) is not encrypted` }
 }
 
-module.exports = { disk_encryption_status }
+// ufw: config file says enabled (readable without root)
+// firewalld / nftables: service is running
+async function firewall_status () {
+  try {
+    const conf = fs.readFileSync('/etc/ufw/ufw.conf', 'utf8')
+    if (/^\s*ENABLED\s*=\s*yes/m.test(conf)) return { status: 'on', detail: 'ufw is on' }
+  } catch {}
+
+  for (const svc of ['firewalld', 'nftables']) {
+    const r = await sh('systemctl', ['is-active', svc])
+    if (r.out === 'active') return { status: 'on', detail: `${svc} is running` }
+    if (/ENOENT/.test(r.err)) return { status: 'unknown', detail: 'no systemctl, could not check firewall services' }
+  }
+  return { status: 'off', detail: 'no firewall found (looked for ufw, firewalld, nftables)' }
+}
+
+module.exports = { disk_encryption_status, firewall_status }

@@ -1,0 +1,24 @@
+# blocks other computers from reaching yours without asking
+id: firewall
+title: firewall
+why: without it, other computers on the same wifi can try to reach yours directly
+platforms: [windows, macos, linux]
+severity: high
+probe: firewall_status
+expect:
+  status: "on"
+benchmark: cis 4.5 / nist sc-7
+
+fix:
+  macos:
+    - open system settings → network → firewall
+    - turn the firewall on
+    - click options and turn on stealth mode (your mac won't answer strangers)
+  windows:
+    - open the start menu and search "firewall & network protection"
+    - for each one (domain, private, public) that says off, click it and turn it on
+  linux:
+    - open the command window
+    - type sudo ufw enable and press enter
+    - type your password when it asks
+    - if ufw is not found, type sudo apt install ufw first (ubuntu / debian)

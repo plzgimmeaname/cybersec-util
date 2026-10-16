@@ -86,7 +86,7 @@ Your computer may say it does not know who made the app. That is okay.
 ## What it checks
 
 - [x] Are your files locked if someone steals your computer?
-- [ ] Is your wall against bad internet traffic turned on?
+- [x] Is your wall against bad internet traffic turned on?
 - [ ] Is your computer up to date?
 - [ ] Does it update by itself?
 - [ ] Is virus protection on?

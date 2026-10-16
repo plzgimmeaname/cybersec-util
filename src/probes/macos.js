@@ -7,4 +7,17 @@ async function disk_encryption_status () {
   return { status: 'unknown', detail: r.err || r.out || 'could not read filevault status' }
 }
 
-module.exports = { disk_encryption_status }
+// state 1 = on, 2 = on and blocking everything, 0 = off
+async function firewall_status () {
+  const fw = '/usr/libexec/ApplicationFirewall/socketfilterfw'
+  const r = await sh(fw, ['--getglobalstate'])
+  const m = r.out.match(/State = (\d)/)
+  if (!m) return { status: 'unknown', detail: r.err || r.out || 'could not read firewall status' }
+  if (m[1] === '0') return { status: 'off', detail: 'firewall is off' }
+
+  const stealth = await sh(fw, ['--getstealthmode'])
+  const hidden = /stealth mode (is on|enabled)/i.test(stealth.out)
+  return { status: 'on', detail: `firewall is on, stealth mode is ${hidden ? 'on' : 'off'}` }
+}
+
+module.exports = { disk_encryption_status, firewall_status }
