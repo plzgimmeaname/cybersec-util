@@ -54,6 +54,10 @@ The app opens. Click **run checkup**.
 
 Click on anything in the list to see how to fix it.
 
+### Stop the app
+
+Close the app window. Or click on the command window and press `Ctrl + C`.
+
 **Next time:** only do Step 2, Step 3 and Step 5.
 
 ---
@@ -87,8 +91,8 @@ Your computer may say it does not know who made the app. That is okay.
 
 - [x] Are your files locked if someone steals your computer?
 - [x] Is your wall against bad internet traffic turned on?
-- [ ] Is your computer up to date?
-- [ ] Does it update by itself?
+- [x] Is your computer up to date?
+- [x] Does it update by itself?
 - [ ] Is virus protection on?
 - [ ] Does your screen lock when you walk away?
 - [ ] Are you using a normal account, not the boss account?

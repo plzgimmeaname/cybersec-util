@@ -1,0 +1,26 @@
+# so fixes land even when you forget
+id: auto-updates
+title: automatic updates
+why: if updates only happen when you remember, holes stay open for weeks
+platforms: [windows, macos, linux]
+severity: medium
+probe: auto_updates_status
+expect:
+  status: "on"
+benchmark: cis 7.3 / nist si-2
+
+fix:
+  macos:
+    - open system settings → general → software update
+    - click the (i) next to automatic updates
+    - turn everything on
+  windows:
+    - open the start menu and search "windows update"
+    - if it says paused, click resume updates
+    - if it says "some settings are managed by your organization", ask whoever set up the computer
+  linux:
+    - ubuntu / debian - type sudo apt install unattended-upgrades and press enter
+    - then type sudo dpkg-reconfigure -plow unattended-upgrades and pick yes
+    - fedora - type sudo dnf install dnf-automatic and press enter
+    - then type sudo systemctl enable --now dnf-automatic-install.timer
+    - arch - no auto updates by design, run sudo pacman -Syu every week

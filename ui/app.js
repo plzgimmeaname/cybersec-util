@@ -71,6 +71,9 @@ async function scan () {
   const btn = $('#scan')
   btn.disabled = true
   btn.textContent = 'checking…'
+  // update checks talk to apple / microsoft / your distro, so it's slow
+  $('#empty').hidden = false
+  $('#empty').textContent = 'checking for updates can take up to a minute.'
   try {
     render(await window.checkup.scan())
   } catch (e) {

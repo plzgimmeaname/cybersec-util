@@ -1,0 +1,26 @@
+# most attacks use holes that already have a fix waiting
+id: os-updates
+title: system updates
+why: updates close security holes that attackers already know about
+platforms: [windows, macos, linux]
+severity: high
+probe: os_updates_status
+expect:
+  status: "current"
+benchmark: cis 7.3 / nist si-2
+
+fix:
+  macos:
+    - open system settings → general → software update
+    - click update now (or restart now)
+    - keep the mac plugged in until it's done
+  windows:
+    - open the start menu and search "windows update"
+    - click check for updates, then download & install
+    - restart when it asks
+  linux:
+    - open the command window
+    - ubuntu / debian - type sudo apt update && sudo apt upgrade and press enter
+    - fedora - type sudo dnf upgrade and press enter
+    - arch - type sudo pacman -Syu and press enter
+    - type your password when it asks, then restart if it says to

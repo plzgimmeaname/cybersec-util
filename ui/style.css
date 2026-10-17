@@ -120,7 +120,7 @@ button:disabled { opacity: .5; cursor: default; }
   color: var(--muted);
 }
 .item.open .more { display: block; }
-.more p + p, .more p + ol { margin-top: 8px; }
+.more > * + * { margin-top: 8px; }
 .more ol { padding-left: 18px; color: var(--text); }
 .more li + li { margin-top: 2px; }
 .more .label { color: var(--text); font-weight: 500; }
