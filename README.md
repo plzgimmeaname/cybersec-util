@@ -93,10 +93,10 @@ Your computer may say it does not know who made the app. That is okay.
 - [x] Is your wall against bad internet traffic turned on?
 - [x] Is your computer up to date?
 - [x] Does it update by itself?
-- [ ] Is virus protection on?
-- [ ] Does your screen lock when you walk away?
-- [ ] Are you using a normal account, not the boss account?
-- [ ] Are there open doors for the internet to get in?
+- [x] Is virus protection on?
+- [x] Does your screen lock when you walk away?
+- [x] Are you using a normal account, not the boss account?
+- [x] Are there open doors for the internet to get in?
 - [ ] Can other people control your computer from far away?
 - [ ] What apps start when your computer turns on?
 - [ ] Is your computer safe when it starts up?

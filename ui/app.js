@@ -1,4 +1,5 @@
 const $ = s => document.querySelector(s)
+const RING = 175.9 // 2 * pi * r (r = 28)
 
 // build elements with textContent only, never innerHTML
 function el (tag, cls, text) {
@@ -15,7 +16,7 @@ function scoreColor (s) {
 
 function dotColor (r) {
   if (r.state === 'pass') return 'green'
-  if (r.state === 'unknown') return ''
+  if (r.state !== 'fail') return ''
   return r.severity === 'critical' || r.severity === 'high' ? 'red' : 'yellow'
 }
 
@@ -26,62 +27,94 @@ function verdict (s) {
   return 'needs attention'
 }
 
+function tagText (r) {
+  if (r.state === 'unknown') return 'unknown'
+  if (r.state === 'info') return 'note'
+  return r.severity
+}
+
 function renderItem (r) {
   const li = el('li', 'item')
   const row = el('div', 'row')
-  row.append(el('span', `dot ${dotColor(r)}`), el('span', 'name', r.title), el('span', 'tag', r.state === 'unknown' ? 'unknown' : r.severity))
+  row.append(el('span', `dot ${dotColor(r)}`), el('span', 'name', r.title), el('span', 'tag', tagText(r)), el('span', 'chev'))
 
-  const more = el('div', 'more')
-  more.append(el('p', null, r.detail))
-  if (r.why) more.append(el('p', null, r.why))
+  const body = el('div', 'more-body')
+  body.append(el('p', 'found', r.detail))
+  if (r.why) body.append(el('p', 'why', r.why))
   if (r.state !== 'pass' && r.fix.length) {
-    more.append(el('p', 'label', 'how to fix'))
+    body.append(el('p', 'label', 'how to fix'))
     const ol = el('ol')
     r.fix.forEach(step => ol.append(el('li', null, step)))
-    more.append(ol)
+    body.append(ol)
   }
-  if (r.benchmark) more.append(el('p', null, r.benchmark))
+  if (r.benchmark) body.append(el('p', 'bench', r.benchmark))
+
+  const inner = el('div', 'more-inner')
+  inner.append(body)
+  const more = el('div', 'more')
+  more.append(inner)
 
   row.addEventListener('click', () => li.classList.toggle('open'))
   li.append(row, more)
   return li
 }
 
-function render (report) {
-  const pass = report.results.filter(r => r.state === 'pass').length
-  const fail = report.results.filter(r => r.state === 'fail').length
-  const unknown = report.results.length - pass - fail
+function countChip (n, color, label) {
+  const s = el('span')
+  s.append(el('span', `dot ${color}`), document.createTextNode(`${n} ${label}`))
+  return s
+}
 
-  $('#score').className = `score ${scoreColor(report.score)}`
+function render (report) {
+  const ok = report.results.filter(r => r.state === 'pass')
+  const todo = report.results.filter(r => r.state !== 'pass')
+  const fails = todo.filter(r => r.state === 'fail').length
+  const other = todo.length - fails
+
+  const color = scoreColor(report.score)
+  const arc = $('#arc')
+  arc.setAttribute('class', `arc ${color}`)
+  arc.style.strokeDashoffset = RING * (1 - (report.score ?? 0) / 100)
   $('#score-num').textContent = report.score ?? '–'
   $('#verdict').textContent = verdict(report.score)
-  $('#counts').textContent = `${pass} ok · ${fail} to fix · ${unknown} unknown`
+  $('#counts').replaceChildren(
+    countChip(ok.length, 'green', 'ok'),
+    countChip(fails, 'red', 'to fix'),
+    ...(other ? [countChip(other, '', 'other')] : [])
+  )
+  $('#when').textContent = `checked ${new Date(report.time).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
   $('#summary').hidden = false
   $('#empty').hidden = true
 
-  const list = $('#results')
-  list.replaceChildren(...report.results.map(renderItem))
-  // open anything that failed so the fix is right there
-  list.querySelectorAll('.item').forEach((li, i) => {
-    if (report.results[i].state === 'fail') li.classList.add('open')
-  })
+  // failures open by default so the fix is right there
+  $('#fix-list').replaceChildren(...todo.map(r => {
+    const li = renderItem(r)
+    if (r.state === 'fail') li.classList.add('open')
+    return li
+  }))
+  $('#ok-list').replaceChildren(...ok.map(renderItem))
+  $('#fix-count').textContent = todo.length
+  $('#ok-count').textContent = ok.length
+  $('#fix-group').hidden = !todo.length
+  $('#ok-group').hidden = !ok.length
 }
 
 async function scan () {
   const btn = $('#scan')
   btn.disabled = true
-  btn.textContent = 'checking…'
+  btn.classList.add('busy')
+  $('#scan-label').textContent = 'checking…'
   // update checks talk to apple / microsoft / your distro, so it's slow
-  $('#empty').hidden = false
-  $('#empty').textContent = 'checking for updates can take up to a minute.'
+  if ($('#summary').hidden) $('#empty-text').textContent = 'checking for updates can take a minute or two.'
   try {
     render(await window.checkup.scan())
   } catch (e) {
     $('#empty').hidden = false
-    $('#empty').textContent = `something went wrong: ${e.message}`
+    $('#empty-text').textContent = `something went wrong: ${e.message}`
   }
   btn.disabled = false
-  btn.textContent = 'run again'
+  btn.classList.remove('busy')
+  $('#scan-label').textContent = 'run again'
 }
 
 window.checkup.info().then(i => { $('#machine').textContent = `${i.host} · ${i.os}` })

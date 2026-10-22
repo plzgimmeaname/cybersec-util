@@ -5,7 +5,7 @@ const yaml = require('js-yaml')
 const checksDir = path.join(__dirname, '..', 'checks')
 const weights = { low: 5, medium: 15, high: 25, critical: 40 }
 const severityOrder = ['critical', 'high', 'medium', 'low']
-const stateOrder = ['fail', 'unknown', 'pass']
+const stateOrder = ['fail', 'unknown', 'info', 'pass']
 
 const probeModules = {
   macos: () => require('./probes/macos'),
@@ -17,10 +17,17 @@ function platform () {
   return { darwin: 'macos', win32: 'windows', linux: 'linux' }[process.platform] || 'unknown'
 }
 
+// a broken check file shows up as unknown instead of stopping the scan
 function loadChecks () {
   return fs.readdirSync(checksDir)
     .filter(f => /\.ya?ml$/.test(f))
-    .map(f => yaml.load(fs.readFileSync(path.join(checksDir, f), 'utf8')))
+    .map(f => {
+      try {
+        return yaml.load(fs.readFileSync(path.join(checksDir, f), 'utf8'))
+      } catch (e) {
+        return { id: f, title: f, severity: 'low', platforms: ['windows', 'macos', 'linux'], broken: `check file is broken: ${e.reason || e.message}` }
+      }
+    })
 }
 
 // every key in expect must match what the probe saw
@@ -37,24 +44,26 @@ async function runCheck (check, probes, os) {
     benchmark: check.benchmark,
     fix: (check.fix && check.fix[os]) || []
   }
+  if (check.broken) return { ...base, state: 'unknown', detail: check.broken }
   const probe = probes[check.probe]
   if (!probe) return { ...base, state: 'unknown', detail: 'no probe for this os yet' }
 
   try {
     const actual = await probe()
-    if (actual.status === 'unknown') return { ...base, state: 'unknown', detail: actual.detail }
+    // unknown and info are reported but never scored
+    if (actual.status === 'unknown' || actual.status === 'info') return { ...base, state: actual.status, detail: actual.detail }
     return { ...base, state: matches(actual, check.expect) ? 'pass' : 'fail', detail: actual.detail }
   } catch (e) {
     return { ...base, state: 'unknown', detail: e.message }
   }
 }
 
-// 0-100, unknowns left out so they don't drag the score
+// 0-100, only pass and fail count
 function score (results) {
   let total = 0
   let lost = 0
   for (const r of results) {
-    if (r.state === 'unknown') continue
+    if (r.state !== 'pass' && r.state !== 'fail') continue
     const w = weights[r.severity] || 0
     total += w
     if (r.state === 'fail') lost += w

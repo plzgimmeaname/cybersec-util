@@ -8,7 +8,7 @@ module.exports = function sh (cmd, args = [], { timeout = 15000 } = {}) {
         ok: !err,
         code: err ? err.code : 0,
         out: String(stdout || '').trim(),
-        err: String(stderr || '').trim() || (err ? err.message : '')
+        err: err && err.killed ? 'took too long to answer, try again later' : String(stderr || '').trim() || (err ? err.message : '')
       })
     })
   })

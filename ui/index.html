@@ -13,20 +13,35 @@
         <h1>security checkup</h1>
         <p id="machine" class="muted">…</p>
       </div>
-      <button id="scan">run checkup</button>
+      <button id="scan"><span class="spinner"></span><span id="scan-label">run checkup</span></button>
     </header>
 
     <section id="summary" hidden>
-      <div id="score" class="score"><span id="score-num">–</span></div>
-      <div>
+      <svg class="ring" viewBox="0 0 64 64" aria-hidden="true">
+        <circle class="track" cx="32" cy="32" r="28"></circle>
+        <circle id="arc" class="arc" cx="32" cy="32" r="28"></circle>
+      </svg>
+      <span id="score-num" class="score-num">–</span>
+      <div class="summary-text">
         <p id="verdict"></p>
-        <p id="counts" class="muted"></p>
+        <p id="counts" class="counts"></p>
+        <p id="when" class="muted small"></p>
       </div>
     </section>
 
-    <p id="empty" class="muted">press run checkup to look at this computer. nothing is changed, it only reads.</p>
+    <div id="empty" class="empty">
+      <p id="empty-text">press run checkup to look at this computer.<br>nothing is changed, it only reads.</p>
+    </div>
 
-    <ul id="results"></ul>
+    <section id="fix-group" class="group" hidden>
+      <h2>to fix <span id="fix-count" class="muted"></span></h2>
+      <ul id="fix-list" class="list"></ul>
+    </section>
+
+    <section id="ok-group" class="group" hidden>
+      <h2>all good <span id="ok-count" class="muted"></span></h2>
+      <ul id="ok-list" class="list"></ul>
+    </section>
   </main>
   <script src="app.js"></script>
 </body>

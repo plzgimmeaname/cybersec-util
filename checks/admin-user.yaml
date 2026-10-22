@@ -1,0 +1,25 @@
+# everyday work in a normal account, admin only when needed
+id: admin-user
+title: everyday account
+why: if a bad app runs in an admin account, it can take over the whole computer
+platforms: [windows, macos, linux]
+severity: medium
+probe: user_is_admin
+expect:
+  status: "standard"
+benchmark: cis 5.4 / nist ac-6
+
+fix:
+  macos:
+    - open system settings → users & groups
+    - click add user, make a new administrator account (for example "admin")
+    - log into the new admin account, then turn off "allow this user to administer this computer" for your normal one
+    - when your mac asks for an admin password, use the new account's name and password
+  windows:
+    - open the start menu and search "other users"
+    - add a new account and set its type to administrator
+    - sign in with the new account, then change your normal account type to standard user
+    - when windows asks for permission, type the admin account's password
+  linux:
+    - on linux it's normal to use sudo from your own account
+    - just make sure your password is strong and only type it when you trust what you ran

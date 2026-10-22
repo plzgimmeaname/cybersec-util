@@ -1,0 +1,24 @@
+# walk away, screen locks within 15 min
+id: screen-lock
+title: screen lock
+why: if you walk away, anyone nearby can use your unlocked computer
+platforms: [windows, macos, linux]
+severity: medium
+probe: screen_lock_status
+expect:
+  status: "on"
+benchmark: cis 4.3 / nist ac-11
+
+fix:
+  macos:
+    - open system settings → lock screen
+    - set "turn display off when inactive" to 10 minutes or less
+    - set "require password after screen saver begins or display is turned off" to immediately
+  windows:
+    - open the start menu and search "power, sleep and battery settings"
+    - set sleep to 10 minutes or less
+    - then search "sign-in options" and set "if you've been away" to "when pc wakes up from sleep"
+  linux:
+    - gnome - open settings → privacy → screen lock (or screen → blank screen delay)
+    - turn on automatic screen lock and set blank screen to 10 minutes or less
+    - kde - open system settings → screen locking and turn on lock automatically after 10 minutes

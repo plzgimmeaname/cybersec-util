@@ -1,5 +1,6 @@
 const fs = require('fs')
 const sh = require('./sh')
+const { summarize } = require('./ports')
 
 // root is encrypted if any device under it is a luks "crypt" layer
 async function disk_encryption_status () {
@@ -78,4 +79,80 @@ async function auto_updates_status () {
   return { status: 'unknown', detail: 'could not tell how this system updates' }
 }
 
-module.exports = { disk_encryption_status, firewall_status, os_updates_status, auto_updates_status }
+// linux rarely needs antivirus at home, so a missing one is just a note
+async function antimalware_status () {
+  for (const svc of ['clamav-daemon', 'clamd@scan', 'clamd', 'clamav-freshclam']) {
+    const r = await sh('systemctl', ['is-active', svc])
+    if (r.out === 'active') return { status: 'on', detail: `clamav is running (${svc})` }
+  }
+  return { status: 'info', detail: 'no antivirus found. on linux this is normal for home use, updates and the firewall matter more' }
+}
+
+// gnome and kde keep this in different places
+async function screen_lock_status () {
+  const desktop = (process.env.XDG_CURRENT_DESKTOP || '').toLowerCase()
+  const num = s => parseInt(String(s).replace(/^uint32\s+/, ''), 10)
+
+  if (desktop.includes('kde')) {
+    for (const cmd of ['kreadconfig6', 'kreadconfig5']) {
+      const read = key => sh(cmd, ['--file', 'kscreenlockerrc', '--group', 'Daemon', '--key', key])
+      const auto = await read('Autolock')
+      if (!auto.ok) continue
+      if (auto.out === 'false') return { status: 'off', detail: 'screen locking is turned off' }
+      const mins = num((await read('Timeout')).out) || 5
+      return mins <= 15
+        ? { status: 'on', detail: `locks after ${mins} min` }
+        : { status: 'off', detail: `takes ${mins} min to lock (should be 15 or less)` }
+    }
+  }
+
+  const get = (schema, key) => sh('gsettings', ['get', schema, key])
+  const enabled = await get('org.gnome.desktop.screensaver', 'lock-enabled')
+  if (enabled.ok) {
+    if (enabled.out !== 'true') return { status: 'off', detail: 'screen locking is turned off' }
+    const idle = num((await get('org.gnome.desktop.session', 'idle-delay')).out)
+    const delay = num((await get('org.gnome.desktop.screensaver', 'lock-delay')).out) || 0
+    if (!idle) return { status: 'off', detail: 'screen never goes blank, so it never locks' }
+    const mins = Math.round((idle + delay) / 60)
+    return mins <= 15
+      ? { status: 'on', detail: `locks after about ${mins} min` }
+      : { status: 'off', detail: `takes about ${mins} min to lock (should be 15 or less)` }
+  }
+  return { status: 'unknown', detail: 'could not find gnome or kde lock settings' }
+}
+
+async function user_is_admin () {
+  const r = await sh('id', ['-Gn'])
+  if (!r.ok) return { status: 'unknown', detail: r.err }
+  const user = process.env.USER || 'you'
+  if (process.getuid && process.getuid() === 0) return { status: 'admin', detail: 'running as root' }
+  const groups = r.out.split(/\s+/).filter(g => ['sudo', 'wheel', 'admin'].includes(g))
+  return groups.length
+    ? { status: 'admin', detail: `${user} can use sudo (group: ${groups.join(', ')})` }
+    : { status: 'standard', detail: `${user} is a standard account` }
+}
+
+// ss shows app names only for your own apps without sudo
+async function listening_ports () {
+  const r = await sh('ss', ['-tlnpH'])
+  if (!r.ok) return { status: 'unknown', detail: r.err || 'could not run ss' }
+  const sockets = r.out.split('\n').filter(Boolean).map(line => {
+    const cols = line.trim().split(/\s+/)
+    const local = cols[3] || ''
+    const i = local.lastIndexOf(':')
+    const name = (line.match(/users:\(\("([^"]+)"/) || [])[1]
+    return { addr: local.slice(0, i).replace(/%.*$/, ''), port: parseInt(local.slice(i + 1), 10), name }
+  })
+  return summarize(sockets, ['avahi-daemon', 'systemd-resolve', 'cupsd', 'chronyd'])
+}
+
+module.exports = {
+  disk_encryption_status,
+  firewall_status,
+  os_updates_status,
+  auto_updates_status,
+  antimalware_status,
+  screen_lock_status,
+  user_is_admin,
+  listening_ports
+}
