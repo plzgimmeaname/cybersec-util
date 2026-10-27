@@ -1,5 +1,9 @@
 const sh = require('./sh')
 const { summarize } = require('./ports')
+const { browser_extensions } = require('./extensions')
+const fs = require('fs')
+const path = require('path')
+const os = require('os')
 
 async function disk_encryption_status () {
   const r = await sh('/usr/bin/fdesetup', ['status'])
@@ -107,7 +111,92 @@ async function listening_ports () {
     const i = m[1].lastIndexOf('.')
     sockets.push({ addr: m[1].slice(0, i), port: parseInt(m[1].slice(i + 1), 10), name: m[2].trim() })
   }
-  return summarize(sockets, ['rapportd', 'ControlCenter', 'sharingd', 'mDNSResponder', 'launchd', 'symptomsd', 'netbiosd', 'AirPlayXPCHelper'])
+  return summarize(sockets, ['rapportd', 'ControlCenter', 'sharingd', 'mDNSResponder', 'launchd', 'symptomsd', 'netbiosd', 'AirPlayXPCHelper', 'AMPDevicesAgent'])
+}
+
+// launchd answers on these ports when a sharing feature is on
+const REMOTE_PORTS = {
+  22: 'remote login (ssh)',
+  5900: 'screen sharing',
+  3283: 'remote management',
+  3031: 'remote apple events',
+  445: 'file sharing'
+}
+
+async function remote_access () {
+  const r = await sh('/usr/sbin/netstat', ['-anv', '-p', 'tcp'])
+  if (!r.ok) return { status: 'unknown', detail: r.err }
+  const on = new Set()
+  for (const line of r.out.split('\n')) {
+    const m = line.match(/^tcp\S*\s+\d+\s+\d+\s+(\S+)\s+\S+\s+LISTEN/)
+    if (!m || /^(127\.|::1)/.test(m[1])) continue
+    const port = parseInt(m[1].slice(m[1].lastIndexOf('.') + 1), 10)
+    if (REMOTE_PORTS[port]) on.add(REMOTE_PORTS[port])
+  }
+  return on.size
+    ? { status: 'open', detail: `turned on: ${[...on].join(', ')}`, items: [...on].map(t => ({ text: t, flag: true })) }
+    : { status: 'closed', detail: 'no remote login, screen sharing or file sharing is on' }
+}
+
+// launch agents / daemons outside apple's own folders
+async function startup_items () {
+  const dirs = ['/Library/LaunchAgents', '/Library/LaunchDaemons', path.join(os.homedir(), 'Library/LaunchAgents')]
+  const items = []
+  for (const dir of dirs) {
+    let files = []
+    try { files = fs.readdirSync(dir).filter(f => f.endsWith('.plist')) } catch { continue }
+    for (const f of files) {
+      const j = await sh('/usr/bin/plutil', ['-convert', 'json', '-o', '-', path.join(dir, f)])
+      let plist = {}
+      try { plist = JSON.parse(j.out) } catch {}
+      const prog = plist.Program || (plist.ProgramArguments || [])[0]
+      const name = f.replace(/\.plist$/, '')
+      if (!prog) { items.push({ text: name }); continue }
+
+      if (!fs.existsSync(prog)) { items.push({ text: name, note: 'program is gone, leftover from a removed app', flag: true }); continue }
+      const sig = await sh('/usr/bin/codesign', ['-v', prog])
+      if (/not signed/i.test(sig.err)) items.push({ text: name, note: 'not signed by its maker', flag: true })
+      else if (/\/tmp\/|\/Users\/Shared\/|\/\./.test(prog)) items.push({ text: name, note: `runs from an odd place: ${prog}`, flag: true })
+      else items.push({ text: name })
+    }
+  }
+  items.sort((a, b) => (!!b.flag - !!a.flag) || a.text.localeCompare(b.text))
+  const flagged = items.filter(i => i.flag).length
+  if (!items.length) return { status: 'clean', detail: 'no extra apps start on their own' }
+  return flagged
+    ? { status: 'review', detail: `${items.length} apps start on their own, ${flagged} worth a look`, items }
+    : { status: 'clean', detail: `${items.length} apps start on their own, all signed by their makers`, items }
+}
+
+// sip stops even admin apps from changing core system files
+async function secure_boot_status () {
+  const r = await sh('/usr/bin/csrutil', ['status'])
+  if (/status: enabled/i.test(r.out)) return { status: 'on', detail: 'system integrity protection is on' }
+  if (/status: disabled/i.test(r.out)) return { status: 'off', detail: 'system integrity protection is off' }
+  return { status: 'unknown', detail: r.err || r.out || 'could not read system integrity protection' }
+}
+
+async function guest_accounts () {
+  const guest = await sh('/usr/bin/defaults', ['read', '/Library/Preferences/com.apple.loginwindow', 'GuestEnabled'])
+  const users = await sh('/usr/bin/dscl', ['.', 'list', '/Users', 'UniqueID'])
+  const people = users.out.split('\n').map(l => l.trim().split(/\s+/)).filter(([n, id]) => parseInt(id, 10) >= 500 && !n.startsWith('_')).map(([n]) => n)
+
+  const items = []
+  for (const u of people) {
+    const last = await sh('/usr/bin/last', ['-1', u])
+    const line = last.out.split('\n')[0] || ''
+    const when = line.match(/\w{3} \w{3}\s+\d+ \d+:\d+/)
+    const seen = !line.startsWith(u) ? 'no recent sign-in on record'
+      : /still logged in/.test(line) ? 'signed in now'
+        : `last sign-in ${when ? when[0].replace(/\s+/g, ' ') : 'unknown'}`
+    items.push({ text: u, note: seen })
+  }
+
+  const guestOn = guest.out === '1'
+  if (guestOn) items.unshift({ text: 'guest', note: 'anyone can sign in without a password', flag: true })
+  return guestOn
+    ? { status: 'open', detail: 'the guest account is on', items }
+    : { status: 'closed', detail: `guest is off, ${people.length} account${people.length === 1 ? '' : 's'} on this mac`, items }
 }
 
 module.exports = {
@@ -118,5 +207,10 @@ module.exports = {
   antimalware_status,
   screen_lock_status,
   user_is_admin,
-  listening_ports
+  listening_ports,
+  remote_access,
+  startup_items,
+  secure_boot_status,
+  guest_accounts,
+  browser_extensions
 }

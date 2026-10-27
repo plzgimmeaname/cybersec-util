@@ -1,0 +1,27 @@
+# things that run every time the computer starts
+id: startup-items
+title: startup apps
+why: bad software hides here so it starts again every time you turn on the computer
+platforms: [windows, macos, linux]
+severity: medium
+probe: startup_items
+expect:
+  status: "clean"
+benchmark: cis 2.1 / nist cm-7
+
+fix:
+  macos:
+    - look at the flagged items in the list above
+    - if you don't know one, search its name online before removing it
+    - leftovers from removed apps are safe to delete. open finder, press cmd + shift + g, go to ~/Library/LaunchAgents and move that file to the trash
+    - some are in /Library/LaunchAgents or /Library/LaunchDaemons instead
+    - also check system settings → general → login items
+  windows:
+    - press ctrl + shift + esc to open task manager, then click startup apps
+    - right-click anything you don't know or need and pick disable
+    - leftovers from removed apps can be cleaned with the app's uninstaller or "apps & features"
+  linux:
+    - look at the flagged items in the list above
+    - autostart apps live in ~/.config/autostart, delete the .desktop file to stop one
+    - for a user service, type systemctl --user disable --now <name>
+    - for cron, type crontab -e and delete the line

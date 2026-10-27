@@ -1,0 +1,26 @@
+# old app versions with holes attackers are using right now
+id: vulnerable-software
+title: unsafe app versions
+why: attackers look for these exact versions because they know how to break in
+platforms: [windows, macos, linux]
+severity: high
+probe: vulnerable_software
+expect:
+  status: "clean"
+benchmark: cis 7.4 / nist ra-5 / cisa kev
+
+fix:
+  macos:
+    - update each app marked in the list above
+    - most apps have "check for updates" in the menu with the app's name
+    - app store apps update in app store → updates
+    - if you don't use an app anymore, drag it to the trash
+  windows:
+    - update each app marked in the list above
+    - most apps have "check for updates" in their help or settings menu
+    - or open the start menu, type powershell, and run winget upgrade --all
+    - if you don't use an app anymore, uninstall it in settings → apps
+  linux:
+    - update each app marked in the list above
+    - ubuntu / debian - type sudo apt update && sudo apt upgrade
+    - for snaps, type sudo snap refresh

@@ -1,6 +1,9 @@
 const fs = require('fs')
 const sh = require('./sh')
 const { summarize } = require('./ports')
+const { browser_extensions } = require('./extensions')
+const path = require('path')
+const os = require('os')
 
 // root is encrypted if any device under it is a luks "crypt" layer
 async function disk_encryption_status () {
@@ -146,6 +149,129 @@ async function listening_ports () {
   return summarize(sockets, ['avahi-daemon', 'systemd-resolve', 'cupsd', 'chronyd'])
 }
 
+const read = f => { try { return fs.readFileSync(f, 'utf8') } catch { return '' } }
+const active = async svc => (await sh('systemctl', ['is-active', svc])).out === 'active'
+
+// sshd uses the first value it sees, drop-in files are read before the main file
+function sshSetting (key, fallback) {
+  const dir = '/etc/ssh/sshd_config.d'
+  let files = []
+  try { files = fs.readdirSync(dir).filter(f => f.endsWith('.conf')).sort().map(f => path.join(dir, f)) } catch {}
+  for (const f of [...files, '/etc/ssh/sshd_config']) {
+    for (const line of read(f).split('\n')) {
+      const t = line.trim()
+      if (/^match\s/i.test(t)) break
+      const m = t.match(new RegExp(`^${key}\\s+(\\S+)`, 'i'))
+      if (m) return m[1].toLowerCase()
+    }
+  }
+  return fallback
+}
+
+async function remote_access () {
+  const items = []
+  if (await active('ssh') || await active('sshd')) {
+    const pw = sshSetting('PasswordAuthentication', 'yes')
+    const root = sshSetting('PermitRootLogin', 'prohibit-password')
+    if (pw === 'yes') items.push({ text: 'ssh server', note: 'allows passwords, which can be guessed', flag: true })
+    else items.push({ text: 'ssh server', note: 'keys only, this is the safe way' })
+    if (root === 'yes') items.push({ text: 'ssh root login', note: 'root can sign in over the network', flag: true })
+  }
+  if (await active('xrdp')) items.push({ text: 'remote desktop (xrdp)', flag: true })
+  if (await active('smbd')) items.push({ text: 'file sharing (samba)', flag: true })
+
+  const ss = await sh('ss', ['-tlnH'])
+  const vnc = ss.out.split('\n').some(l => /:(59\d\d)\s/.test(l) && !/127\.0\.0\.1|\[::1\]/.test(l))
+  if (vnc) items.push({ text: 'screen sharing (vnc)', flag: true })
+
+  const flagged = items.filter(i => i.flag)
+  if (!items.length) return { status: 'closed', detail: 'no ssh, remote desktop or file sharing is on' }
+  return flagged.length
+    ? { status: 'open', detail: `turned on: ${flagged.map(i => i.text).join(', ')}`, items }
+    : { status: 'closed', detail: 'ssh is on but only accepts keys', items }
+}
+
+// paths that malware likes to hide in
+const odd = p => /^\/(tmp|var\/tmp|dev\/shm)\/|\/\./.test(p)
+
+function judge (name, prog) {
+  if (!prog) return { text: name }
+  if (prog.startsWith('/') && !fs.existsSync(prog)) return { text: name, note: 'program is gone, leftover from a removed app', flag: true }
+  if (odd(prog)) return { text: name, note: `runs from an odd place: ${prog}`, flag: true }
+  return { text: name }
+}
+
+// desktop autostart, user systemd services, and your crontab
+async function startup_items () {
+  const items = []
+  const auto = path.join(os.homedir(), '.config/autostart')
+  let files = []
+  try { files = fs.readdirSync(auto).filter(f => f.endsWith('.desktop')) } catch {}
+  for (const f of files) {
+    const text = read(path.join(auto, f))
+    if (/^Hidden\s*=\s*true/mi.test(text)) continue
+    const exec = (text.match(/^Exec\s*=\s*(.+)$/m) || [])[1] || ''
+    items.push(judge(f.replace(/\.desktop$/, ''), exec.split(/\s+/)[0]))
+  }
+
+  const units = await sh('systemctl', ['--user', 'list-unit-files', '--state=enabled', '--type=service', '--no-legend'])
+  for (const unit of units.out.split('\n').map(l => l.trim().split(/\s+/)[0]).filter(Boolean)) {
+    const show = await sh('systemctl', ['--user', 'show', '-p', 'ExecStart', unit])
+    items.push(judge(unit.replace(/\.service$/, ''), (show.out.match(/path=(\S+)/) || [])[1]))
+  }
+
+  const cron = await sh('crontab', ['-l'])
+  for (const line of cron.out.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#') && !/^\w+=/.test(l))) {
+    const cmd = line.startsWith('@') ? line.split(/\s+/).slice(1).join(' ') : line.split(/\s+/).slice(5).join(' ')
+    if (/(curl|wget)[^|]*\|\s*(ba|z)?sh/.test(cmd)) items.push({ text: `cron: ${cmd.slice(0, 60)}`, note: 'downloads and runs code from the internet', flag: true })
+    else items.push({ ...judge(`cron: ${cmd.slice(0, 60)}`, cmd.split(/\s+/)[0]) })
+  }
+
+  items.sort((a, b) => (!!b.flag - !!a.flag) || a.text.localeCompare(b.text))
+  const flagged = items.filter(i => i.flag).length
+  if (!items.length) return { status: 'clean', detail: 'no extra apps start on their own' }
+  return flagged
+    ? { status: 'review', detail: `${items.length} things start on their own, ${flagged} worth a look`, items }
+    : { status: 'clean', detail: `${items.length} things start on their own, none look odd`, items }
+}
+
+// the SecureBoot efi variable: last byte 1 = on
+async function secure_boot_status () {
+  const mok = await sh('mokutil', ['--sb-state'])
+  if (/SecureBoot enabled/i.test(mok.out)) return { status: 'on', detail: 'secure boot is on' }
+  if (/SecureBoot disabled/i.test(mok.out)) return { status: 'off', detail: 'secure boot is off' }
+
+  if (!fs.existsSync('/sys/firmware/efi')) return { status: 'off', detail: 'this computer starts in old bios mode, so secure boot is not used' }
+  try {
+    const v = fs.readFileSync('/sys/firmware/efi/efivars/SecureBoot-8be4df61-93ca-11d2-aa0d-00e098032b8c')
+    return v[v.length - 1] === 1 ? { status: 'on', detail: 'secure boot is on' } : { status: 'off', detail: 'secure boot is off' }
+  } catch {
+    return { status: 'unknown', detail: 'could not read secure boot (try installing mokutil)' }
+  }
+}
+
+// /etc/passwd is readable by everyone; an empty password field means no password at all
+async function guest_accounts () {
+  const passwd = read('/etc/passwd')
+  if (!passwd) return { status: 'unknown', detail: 'could not read /etc/passwd' }
+  const items = []
+  for (const line of passwd.split('\n')) {
+    const [name, pw, uid, , , , shell] = line.split(':')
+    if (!name || !shell || /(nologin|false)$/.test(shell)) continue
+    const id = parseInt(uid, 10)
+    if (pw === '') items.push({ text: name, note: 'has no password', flag: true })
+    else if (name === 'guest' || name.startsWith('guest-')) items.push({ text: name, note: 'guest account', flag: true })
+    else if (id >= 1000 && id < 65534) items.push({ text: name })
+  }
+  const lightdm = ['/etc/lightdm/lightdm.conf', '/usr/share/lightdm/lightdm.conf.d/50-guest-wrapper.conf']
+  if (lightdm.some(f => /^\s*allow-guest\s*=\s*true/mi.test(read(f)))) items.unshift({ text: 'guest session', note: 'anyone can sign in without a password', flag: true })
+
+  const flagged = items.filter(i => i.flag).length
+  return flagged
+    ? { status: 'open', detail: `${flagged} account${flagged === 1 ? '' : 's'} can be used without a password`, items }
+    : { status: 'closed', detail: 'no guest or passwordless accounts', items }
+}
+
 module.exports = {
   disk_encryption_status,
   firewall_status,
@@ -154,5 +280,10 @@ module.exports = {
   antimalware_status,
   screen_lock_status,
   user_is_admin,
-  listening_ports
+  listening_ports,
+  remote_access,
+  startup_items,
+  secure_boot_status,
+  guest_accounts,
+  browser_extensions
 }

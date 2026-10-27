@@ -54,6 +54,19 @@ The app opens. Click **run checkup**.
 
 Click on anything in the list to see how to fix it.
 
+### Save your results
+
+Click **web page** or **json** under your score. Pick where to save it.
+The web page opens in any browser. You can print it too.
+
+### See what changed
+
+The first time you run it, the app remembers how your computer looks.
+
+Every time after that, it shows what is new or gone. For example, a new browser add-on.
+
+If you made the change yourself, click **these are fine**.
+
 ### Stop the app
 
 Close the app window. Or click on the command window and press `Ctrl + C`.
@@ -67,6 +80,7 @@ Close the app window. Or click on the command window and press `Ctrl + C`.
 - **It says "command not found":** close the window and open it again. Try again. If it still does not work, do Step 1 again.
 - **You see red words after `npm install`:** you are in the wrong folder. Do Step 3 again.
 - **Something says "unknown":** the app could not check that thing. It does not lower your score.
+- **It takes a long time:** the update and old app checks use the internet. The first run can take a minute or two. After that it's faster.
 
 ---
 
@@ -97,11 +111,28 @@ Your computer may say it does not know who made the app. That is okay.
 - [x] Does your screen lock when you walk away?
 - [x] Are you using a normal account, not the boss account?
 - [x] Are there open doors for the internet to get in?
-- [ ] Can other people control your computer from far away?
-- [ ] What apps start when your computer turns on?
-- [ ] Is your computer safe when it starts up?
-- [ ] Are there extra accounts you don't use?
-- [ ] Are your browser add-ons safe?
-- [ ] Save your results
-- [ ] What changed since last time?
-- [ ] Do you have old apps that are not safe?
+- [x] Can other people control your computer from far away?
+- [x] What apps start when your computer turns on?
+- [x] Is your computer safe when it starts up?
+- [x] Are there extra accounts you don't use?
+- [x] Are your browser add-ons safe?
+- [x] Save your results
+- [x] What changed since last time?
+- [x] Do you have old apps that are not safe?
+
+---
+
+## What it sends over the internet
+
+Almost nothing. It only reads your computer.
+
+- **Updates check:** asks Apple, Microsoft or your Linux system if updates are waiting. Same as clicking "check for updates".
+- **Old apps check:** sends app names and version numbers (like "chrome 140") to **nvd.nist.gov**, a free U.S. government list of security holes. Nothing else is sent. Answers are saved for one day.
+
+Your results stay on your computer. They are in this folder:
+
+- **Mac:** `~/Library/Application Support/Security Checkup`
+- **Windows:** `%APPDATA%\Security Checkup`
+- **Linux:** `~/.config/Security Checkup`
+
+Delete that folder to start fresh.

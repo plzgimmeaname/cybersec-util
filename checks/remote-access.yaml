@@ -1,0 +1,23 @@
+# ways someone else can sign in or take control over the network
+id: remote-access
+title: remote access
+why: these let other computers sign in, see your screen, or open your files
+platforms: [windows, macos, linux]
+severity: high
+probe: remote_access
+expect:
+  status: "closed"
+benchmark: cis 4.8 / nist ac-17
+
+fix:
+  macos:
+    - open system settings → general → sharing
+    - turn off anything you don't use (remote login, screen sharing, file sharing, remote management)
+  windows:
+    - open the start menu and search "remote desktop settings", turn it off if you don't use it
+    - to stop sharing a folder, right-click it → properties → sharing → advanced sharing → untick share
+    - winrm or an ssh server is usually set up on purpose, ask whoever set up the computer
+  linux:
+    - if you don't need ssh, type sudo systemctl disable --now ssh
+    - if you do, turn off passwords. add PasswordAuthentication no to /etc/ssh/sshd_config, then restart ssh
+    - turn off what you don't use, for example sudo systemctl disable --now xrdp smbd

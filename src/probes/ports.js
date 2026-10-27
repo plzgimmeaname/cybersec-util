@@ -19,8 +19,10 @@ function summarize (sockets, system) {
   const sysNote = sys ? ` (${sys} from the system itself, these are normal)` : ''
   if (!byApp.size) return { status: 'closed', detail: `no apps are open to your network${sysNote}` }
 
-  const list = [...byApp].map(([name, ports]) => `${name} (${[...ports].sort((a, b) => a - b).join(', ')})`)
-  return { status: 'open', detail: `open to your network: ${list.join(', ')}${sysNote}` }
+  const ports = p => [...p].sort((a, b) => a - b).join(', ')
+  const list = [...byApp].map(([name, p]) => `${name} (${ports(p)})`)
+  const items = [...byApp].map(([name, p]) => ({ text: name, note: `port ${ports(p)}`, flag: true }))
+  return { status: 'open', detail: `open to your network: ${list.join(', ')}${sysNote}`, items }
 }
 
 module.exports = { summarize }

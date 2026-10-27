@@ -1,0 +1,28 @@
+# add-ons that can see everything you do on the web
+id: browser-extensions
+title: browser add-ons
+why: an add-on that can read every site can see your passwords, messages and bank pages
+platforms: [windows, macos, linux]
+severity: medium
+probe: browser_extensions
+expect:
+  status: "ok"
+benchmark: cis 9.4 / nist cm-7
+
+fix:
+  macos:
+    - look at the add-ons marked "can read every site" in the list above
+    - remove the ones you don't use or don't recognize
+    - chrome / arc / brave / edge - type chrome://extensions in the address bar (edge://, brave:// work too)
+    - firefox - type about:addons in the address bar
+    - safari add-ons aren't checked yet, look in safari → settings → extensions
+  windows:
+    - look at the add-ons marked "can read every site" in the list above
+    - remove the ones you don't use or don't recognize
+    - chrome / edge / brave - type chrome://extensions or edge://extensions in the address bar
+    - firefox - type about:addons in the address bar
+  linux:
+    - look at the add-ons marked "can read every site" in the list above
+    - remove the ones you don't use or don't recognize
+    - chrome / chromium / brave - type chrome://extensions in the address bar
+    - firefox - type about:addons in the address bar

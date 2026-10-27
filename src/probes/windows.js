@@ -1,7 +1,9 @@
 const sh = require('./sh')
 const { summarize } = require('./ports')
+const { browser_extensions } = require('./extensions')
 
-const ps = (script, opts) => sh('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], opts)
+// scripts go in base64 so windows never mangles their quotes
+const ps = (script, opts) => sh('powershell.exe', ['-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(script, 'utf16le').toString('base64')], opts)
 
 // turns "key=value" lines into an object
 function lines (out) {
@@ -177,6 +179,125 @@ async function listening_ports () {
   return summarize(sockets, ['System', 'svchost', 'lsass', 'wininit', 'services', 'spoolsv', 'Idle'])
 }
 
+// remote desktop, winrm, an ssh server, or shared folders
+async function remote_access () {
+  const r = await ps(`
+    $ts = Get-ItemProperty 'HKLM:\\System\\CurrentControlSet\\Control\\Terminal Server' -ErrorAction SilentlyContinue
+    "rdp=$($ts.fDenyTSConnections)"
+    "winrm=$((Get-Service WinRM -ErrorAction SilentlyContinue).Status)"
+    "sshd=$((Get-Service sshd -ErrorAction SilentlyContinue).Status)"
+    "shares=$((Get-CimInstance Win32_Share -ErrorAction SilentlyContinue | Where-Object { $_.Name -notmatch '\\$$' } | ForEach-Object { $_.Name }) -join ',')"
+  `)
+  const o = lines(r.out)
+  if (o.rdp == null && o.winrm == null) return { status: 'unknown', detail: r.err || 'could not read remote settings' }
+
+  const on = []
+  if (o.rdp === '0') on.push('remote desktop')
+  if (o.winrm === 'Running') on.push('windows remote management (winrm)')
+  if (o.sshd === 'Running') on.push('ssh server')
+  for (const share of (o.shares || '').split(',').filter(Boolean)) on.push(`shared folder: ${share}`)
+  return on.length
+    ? { status: 'open', detail: `turned on: ${on.length} way${on.length === 1 ? '' : 's'} in from other computers`, items: on.map(t => ({ text: t, flag: true })) }
+    : { status: 'closed', detail: 'no remote desktop, remote management or shared folders are on' }
+}
+
+// run keys + startup folders, each checked for a valid signature
+async function startup_items () {
+  const r = await ps(`
+    function Get-Exe($cmd) {
+      if ($cmd -match '^\\s*"([^"]+)"') { return $matches[1] }
+      if ($cmd -match '^\\s*(.+?\\.exe)') { return $matches[1] }
+      return ($cmd -split ' ')[0]
+    }
+    $found = @()
+    $keys = 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run',
+            'HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run',
+            'HKLM:\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Run'
+    foreach ($k in $keys) {
+      $p = Get-ItemProperty $k -ErrorAction SilentlyContinue
+      if ($p) { $p.PSObject.Properties | Where-Object { $_.Name -notlike 'PS*' } | ForEach-Object { $found += ,@($_.Name, (Get-Exe $_.Value)) } }
+    }
+    $shell = New-Object -ComObject WScript.Shell
+    $dirs = "$env:APPDATA\\Microsoft\\Windows\\Start Menu\\Programs\\Startup",
+            "$env:ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Startup"
+    foreach ($d in $dirs) {
+      Get-ChildItem $d -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -ne 'desktop.ini' } | ForEach-Object {
+        $t = if ($_.Extension -eq '.lnk') { $shell.CreateShortcut($_.FullName).TargetPath } else { $_.FullName }
+        $found += ,@($_.BaseName, $t)
+      }
+    }
+    foreach ($f in $found) {
+      $exe = [Environment]::ExpandEnvironmentVariables($f[1])
+      $st = if (-not $exe -or -not (Test-Path -LiteralPath $exe)) { 'missing' } else { (Get-AuthenticodeSignature -LiteralPath $exe).Status }
+      "item=$($f[0])|$st|$exe"
+    }
+    "done=1"
+  `, { timeout: 60000 })
+  if (!/done=1/.test(r.out)) return { status: 'unknown', detail: r.err || 'could not list startup apps' }
+
+  const items = r.out.split(/\r?\n/).filter(l => l.startsWith('item=')).map(l => {
+    const [name, st, exe] = l.slice(5).split('|')
+    if (st === 'missing') return { text: name, note: 'program is gone, leftover from a removed app', flag: true }
+    if (/\\(temp|users\\public)\\/i.test(exe)) return { text: name, note: `runs from an odd place: ${exe}`, flag: true }
+    if (st === 'NotSigned') return { text: name, note: 'not signed by its maker', flag: true }
+    if (st !== 'Valid') return { text: name, note: 'its signature is broken', flag: true }
+    return { text: name }
+  }).sort((a, b) => (!!b.flag - !!a.flag) || a.text.localeCompare(b.text))
+
+  const flagged = items.filter(i => i.flag).length
+  if (!items.length) return { status: 'clean', detail: 'no extra apps start on their own' }
+  return flagged
+    ? { status: 'review', detail: `${items.length} apps start on their own, ${flagged} worth a look`, items }
+    : { status: 'clean', detail: `${items.length} apps start on their own, all signed by their makers`, items }
+}
+
+// no secureboot key at all means the pc starts in old bios mode
+async function secure_boot_status () {
+  const r = await ps(`
+    $sb = Get-ItemProperty 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\SecureBoot\\State' -ErrorAction SilentlyContinue
+    "sb=$($sb.UEFISecureBootEnabled)"
+    $dg = Get-CimInstance -Namespace root\\Microsoft\\Windows\\DeviceGuard -ClassName Win32_DeviceGuard -ErrorAction SilentlyContinue
+    "vbs=$($dg.VirtualizationBasedSecurityStatus)"
+  `)
+  const o = lines(r.out)
+  if (o.sb == null) return { status: 'unknown', detail: r.err || 'could not read secure boot' }
+  const vbs = o.vbs === '2' ? ', memory integrity (vbs) is on' : ''
+  if (o.sb === '1') return { status: 'on', detail: `secure boot is on${vbs}` }
+  if (o.sb === '0') return { status: 'off', detail: 'secure boot is off' }
+  return { status: 'off', detail: 'this pc starts in old bios mode, so secure boot is not used' }
+}
+
+// guest (-501) and the built-in administrator (-500) should be off,
+// other accounts nobody signed into for 90 days are worth removing
+async function guest_accounts () {
+  const r = await ps(`
+    Get-LocalUser | ForEach-Object {
+      $last = if ($_.LastLogon) { $_.LastLogon.ToString('yyyy-MM-dd') } else { 'never' }
+      "user=$($_.Name)|$($_.Enabled)|$last|$($_.SID.Value)"
+    }
+  `)
+  const users = r.out.split(/\r?\n/).filter(l => l.startsWith('user=')).map(l => {
+    const [name, enabled, last, sid] = l.slice(5).split('|')
+    return { name, enabled: enabled === 'True', last, rid: sid.split('-').pop() }
+  })
+  if (!users.length) return { status: 'unknown', detail: r.err || 'could not list accounts' }
+
+  const me = (process.env.USERNAME || '').toLowerCase()
+  const old = Date.now() - 90 * 864e5
+  const items = []
+  for (const u of users.filter(u => u.enabled && !['503', '504'].includes(u.rid))) {
+    if (u.rid === '501') items.push({ text: u.name, note: 'guest account is on', flag: true })
+    else if (u.rid === '500') items.push({ text: u.name, note: 'built-in administrator is on', flag: true })
+    else if (u.name.toLowerCase() !== me && (u.last === 'never' || new Date(u.last) < old)) {
+      items.push({ text: u.name, note: u.last === 'never' ? 'never signed in' : `last sign-in ${u.last}`, flag: true })
+    } else items.push({ text: u.name, note: u.last === 'never' ? '' : `last sign-in ${u.last}` })
+  }
+  const flagged = items.filter(i => i.flag).length
+  return flagged
+    ? { status: 'open', detail: `${flagged} account${flagged === 1 ? '' : 's'} should be turned off`, items }
+    : { status: 'closed', detail: 'no guest or unused accounts', items }
+}
+
 module.exports = {
   disk_encryption_status,
   firewall_status,
@@ -185,5 +306,10 @@ module.exports = {
   antimalware_status,
   screen_lock_status,
   user_is_admin,
-  listening_ports
+  listening_ports,
+  remote_access,
+  startup_items,
+  secure_boot_status,
+  guest_accounts,
+  browser_extensions
 }

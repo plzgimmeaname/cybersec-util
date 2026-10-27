@@ -1,0 +1,119 @@
+# apps checked for known-attacked holes
+# name    what shows in the app
+# cpe     the app's id in the nvd database (vendor:product), found at nvd.nist.gov/products/cpe/search
+# macos   app name in /Applications (regex)
+# windows name in "apps & features" (regex)
+# linux   package or snap name (regex). only vendor-made packages, distro ones get fixes without new version numbers
+
+- name: google chrome
+  cpe: [google:chrome]
+  macos: ^Google Chrome$
+  windows: ^Google Chrome$
+  linux: ^google-chrome-stable$
+
+- name: firefox
+  cpe: [mozilla:firefox]
+  macos: ^Firefox$
+  windows: ^Mozilla Firefox
+  linux: ^firefox$
+
+- name: microsoft edge
+  cpe: [microsoft:edge_chromium]
+  macos: ^Microsoft Edge$
+  windows: ^Microsoft Edge$
+  linux: ^microsoft-edge-stable$
+
+- name: brave
+  cpe: [brave:browser]
+  macos: ^Brave Browser$
+  windows: ^Brave$
+  linux: ^brave-browser$
+
+- name: opera
+  cpe: [opera:opera_browser]
+  macos: ^Opera$
+  windows: ^Opera Stable
+  linux: ^opera-stable$
+
+- name: safari
+  cpe: [apple:safari]
+  macos: ^Safari$
+
+- name: zoom
+  cpe: [zoom:workplace_desktop, zoom:meetings]
+  macos: ^zoom\.us$
+  windows: ^Zoom
+  linux: ^zoom$
+
+- name: adobe acrobat reader
+  cpe: [adobe:acrobat_reader_dc]
+  macos: ^Adobe Acrobat Reader
+  windows: ^Adobe Acrobat Reader
+
+- name: adobe acrobat
+  cpe: [adobe:acrobat_dc]
+  macos: ^Adobe Acrobat( DC)?$
+  windows: ^Adobe Acrobat( DC)?( \(64-bit\))?$
+
+- name: vlc
+  cpe: [videolan:vlc_media_player]
+  macos: ^VLC$
+  windows: ^VLC media player
+
+- name: 7-zip
+  cpe: [7-zip:7-zip]
+  windows: ^7-Zip
+
+- name: winrar
+  cpe: [rarlab:winrar]
+  windows: ^WinRAR
+
+- name: notepad++
+  cpe: ['notepad-plus-plus:notepad\+\+']
+  windows: ^Notepad\+\+
+
+- name: putty
+  cpe: [putty:putty]
+  windows: ^PuTTY
+
+- name: filezilla
+  cpe: [filezilla-project:filezilla_client]
+  macos: ^FileZilla$
+  windows: ^FileZilla
+
+- name: telegram
+  cpe: [telegram:telegram_desktop]
+  macos: ^Telegram Desktop$
+  windows: ^Telegram Desktop
+
+- name: thunderbird
+  cpe: [mozilla:thunderbird]
+  macos: ^Thunderbird$
+  windows: ^Mozilla Thunderbird
+
+- name: libreoffice
+  cpe: [libreoffice:libreoffice]
+  macos: ^LibreOffice$
+  windows: ^LibreOffice
+
+- name: openvpn connect
+  cpe: [openvpn:connect]
+  macos: ^OpenVPN Connect$
+  windows: ^OpenVPN Connect
+
+- name: microsoft teams
+  cpe: [microsoft:teams]
+  macos: ^Microsoft Teams
+  windows: ^Microsoft Teams
+
+- name: visual studio code
+  cpe: [microsoft:visual_studio_code]
+  macos: ^Visual Studio Code$
+  windows: ^Microsoft Visual Studio Code
+  linux: ^code$
+
+- name: docker desktop
+  cpe: [docker:desktop]
+  macos: ^Docker$
+  windows: ^Docker Desktop$
+  linux: ^docker-desktop$

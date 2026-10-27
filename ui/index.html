@@ -7,39 +7,81 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <main>
-    <header>
+  <header class="bar">
+    <div class="bar-inner">
       <div>
         <h1>security checkup</h1>
-        <p id="machine" class="muted">…</p>
+        <p id="machine" class="muted small">…</p>
       </div>
-      <button id="scan"><span class="spinner"></span><span id="scan-label">run checkup</span></button>
-    </header>
+      <button id="scan" class="primary" title="ctrl / cmd + r"><span class="spinner"></span><span id="scan-label">run checkup</span></button>
+    </div>
+    <div id="progress" class="progress" hidden><div id="progress-fill" class="progress-fill"></div></div>
+  </header>
 
-    <section id="summary" hidden>
-      <svg class="ring" viewBox="0 0 64 64" aria-hidden="true">
-        <circle class="track" cx="32" cy="32" r="28"></circle>
-        <circle id="arc" class="arc" cx="32" cy="32" r="28"></circle>
-      </svg>
-      <span id="score-num" class="score-num">–</span>
+  <main>
+    <section id="summary" class="card summary" hidden>
+      <div class="ring-wrap">
+        <svg class="ring" viewBox="0 0 64 64" aria-hidden="true">
+          <circle class="track" cx="32" cy="32" r="28"></circle>
+          <circle id="arc" class="arc" cx="32" cy="32" r="28"></circle>
+        </svg>
+        <span id="score-num" class="score-num">–</span>
+      </div>
       <div class="summary-text">
-        <p id="verdict"></p>
+        <p id="verdict" class="verdict"></p>
         <p id="counts" class="counts"></p>
+        <p id="first" class="first"></p>
+      </div>
+      <div class="summary-side">
+        <svg id="trend" class="trend" viewBox="0 0 96 28" aria-label="score over past checkups" hidden></svg>
         <p id="when" class="muted small"></p>
+        <button id="how-btn" class="link small" aria-expanded="false">how is this scored?</button>
+      </div>
+      <p id="how" class="how small muted" hidden>
+        each check has a size: critical 40, high 25, medium 15, low 5.
+        your score is the share of those points you pass. unknowns and notes don't count.
+        the line on the right is your score over the last checkups.
+      </p>
+      <div class="save-row">
+        <span class="muted small">save report as</span>
+        <button class="chip" data-save="html">web page</button>
+        <button class="chip" data-save="json">json</button>
+        <span id="saved" class="small saved"></span>
       </div>
     </section>
 
-    <div id="empty" class="empty">
-      <p id="empty-text">press run checkup to look at this computer.<br>nothing is changed, it only reads.</p>
-    </div>
+    <section id="drift" class="card drift" hidden>
+      <div class="drift-head">
+        <div>
+          <p class="drift-title" id="drift-title"></p>
+          <p class="muted small" id="drift-sub"></p>
+        </div>
+        <button id="accept" class="chip" hidden>these are fine</button>
+      </div>
+      <ul id="drift-list" class="changes"></ul>
+    </section>
+
+    <section id="empty" class="empty">
+      <div class="shield" aria-hidden="true"></div>
+      <p class="empty-title">see how safe this computer is</p>
+      <p class="muted">14 quick checks. nothing gets changed, it only reads.</p>
+    </section>
+
+    <section id="live" class="card live" hidden>
+      <p class="live-title"><span id="live-count">0</span> of <span id="live-total">0</span> done <span class="muted small">· updates can take a minute or two</span></p>
+      <ul id="live-list" class="live-list"></ul>
+    </section>
 
     <section id="fix-group" class="group" hidden>
-      <h2>to fix <span id="fix-count" class="muted"></span></h2>
+      <div class="group-head">
+        <h2>to fix <span id="fix-count" class="muted"></span></h2>
+        <button id="toggle-all" class="link small">collapse all</button>
+      </div>
       <ul id="fix-list" class="list"></ul>
     </section>
 
     <section id="ok-group" class="group" hidden>
-      <h2>all good <span id="ok-count" class="muted"></span></h2>
+      <div class="group-head"><h2>all good <span id="ok-count" class="muted"></span></h2></div>
       <ul id="ok-list" class="list"></ul>
     </section>
   </main>

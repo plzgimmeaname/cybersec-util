@@ -1,0 +1,24 @@
+# accounts you don't use are doors you forgot about
+id: guest-accounts
+title: extra accounts
+why: guest and forgotten accounts let someone use your computer without your password
+platforms: [windows, macos, linux]
+severity: low
+probe: guest_accounts
+expect:
+  status: "closed"
+benchmark: cis 5.3 / nist ac-2
+
+fix:
+  macos:
+    - open system settings → users & groups
+    - click the (i) next to guest user and turn off "allow guests to log in"
+    - to remove an account nobody uses, click its (i) and pick delete user
+  windows:
+    - open the start menu and search "other users"
+    - remove accounts nobody uses
+    - to turn off guest or the built-in administrator, open command prompt as admin and type net user guest /active:no
+  linux:
+    - to set a password for an account, type sudo passwd <name>
+    - to remove an account nobody uses, type sudo userdel <name>
+    - to turn off a lightdm guest session, set allow-guest=false in /etc/lightdm/lightdm.conf

@@ -1,0 +1,25 @@
+# makes sure the system that starts up is the real one
+id: secure-boot
+title: safe startup
+why: it stops hidden malware from loading before your system does
+platforms: [windows, macos, linux]
+severity: medium
+probe: secure_boot_status
+expect:
+  status: "on"
+benchmark: cis 4.1 / nist si-7
+
+fix:
+  macos:
+    - system integrity protection is on unless someone turned it off on purpose
+    - restart into recovery (hold the power button on apple silicon, cmd + r on intel)
+    - open utilities → terminal, type csrutil enable, press enter, then restart
+  windows:
+    - secure boot is turned on in the pc's firmware (bios / uefi) settings
+    - open settings → system → recovery → advanced startup → restart now
+    - pick troubleshoot → advanced options → uefi firmware settings
+    - find secure boot and turn it on. if it says "legacy" or "csm", ask for help first, changing it can stop windows from starting
+  linux:
+    - secure boot is turned on in your computer's firmware (bios / uefi) settings
+    - most big distros (ubuntu, fedora) work with it on
+    - if you use extra drivers (like nvidia), you may need to sign them first, search "<your distro> secure boot"

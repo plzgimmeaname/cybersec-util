@@ -51,8 +51,8 @@ async function runCheck (check, probes, os) {
   try {
     const actual = await probe()
     // unknown and info are reported but never scored
-    if (actual.status === 'unknown' || actual.status === 'info') return { ...base, state: actual.status, detail: actual.detail }
-    return { ...base, state: matches(actual, check.expect) ? 'pass' : 'fail', detail: actual.detail }
+    if (actual.status === 'unknown' || actual.status === 'info') return { ...base, state: actual.status, detail: actual.detail, items: actual.items || [] }
+    return { ...base, state: matches(actual, check.expect) ? 'pass' : 'fail', detail: actual.detail, items: actual.items || [] }
   } catch (e) {
     return { ...base, state: 'unknown', detail: e.message }
   }
@@ -71,13 +71,20 @@ function score (results) {
   return total ? Math.round(100 * (1 - lost / total)) : null
 }
 
-async function run () {
+// onProgress gets the full list first, then each check as it finishes
+async function run (onProgress = () => {}) {
   const os = platform()
   if (!probeModules[os]) return { os, score: null, results: [], time: new Date().toISOString() }
 
-  const probes = probeModules[os]()
+  // shared probes work the same everywhere, the os file can override them
+  const probes = { ...require('./probes/software'), ...probeModules[os]() }
   const checks = loadChecks().filter(c => (c.platforms || []).includes(os))
-  const results = await Promise.all(checks.map(c => runCheck(c, probes, os)))
+  onProgress({ type: 'start', checks: checks.map(c => ({ id: c.id, title: c.title })) })
+  const results = await Promise.all(checks.map(async c => {
+    const r = await runCheck(c, probes, os)
+    onProgress({ type: 'done', id: r.id, state: r.state, severity: r.severity })
+    return r
+  }))
 
   results.sort((a, b) =>
     stateOrder.indexOf(a.state) - stateOrder.indexOf(b.state) ||
