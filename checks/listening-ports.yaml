@@ -1,24 +1,27 @@
 # apps waiting for other computers to connect in
 id: listening-ports
-title: open doors
-why: apps that listen to your network can be reached by others on the same wifi
+title: Apps open to the network
+category: network
+why: Apps that listen to your network can be reached by others on the same Wi-Fi.
 platforms: [windows, macos, linux]
 severity: high
 probe: listening_ports
 expect:
   status: "closed"
-benchmark: cis 4.8 / nist cm-7
-
+benchmark: CIS 4.8 · NIST CM-7
+open:
+  macos: x-apple.systempreferences:com.apple.Network-Settings.extension
+  windows: ms-settings:windowsdefender
 fix:
   macos:
-    - look at the app names above. if you know and trust each one, this is okay
-    - if you don't need it, quit the app or turn off its sharing / "connect" feature
-    - keep the firewall on so your mac asks before letting anything in
+    - Look at the app names above. If you know and trust each one, this is okay.
+    - If you don't need it, quit the app or turn off its sharing or "connect" feature.
+    - Keep the firewall on so your Mac asks before letting anything in.
   windows:
-    - look at the app names above. if you know and trust each one, this is okay
-    - if you don't need it, close or uninstall the app
-    - keep the firewall on so windows asks before letting anything in
+    - Look at the app names above. If you know and trust each one, this is okay.
+    - If you don't need it, close or uninstall the app.
+    - Keep the firewall on so Windows asks before letting anything in.
   linux:
-    - look at the app names above. if you know and trust each one, this is okay
-    - to turn off a service you don't need, type sudo systemctl disable --now <name>
-    - if it says unknown app, it is a system app. type sudo ss -tlnp to see its name
+    - Look at the app names above. If you know and trust each one, this is okay.
+    - To turn off a service you don't need, type sudo systemctl disable --now <name>
+    - If it says unknown app, it is a system app. Type sudo ss -tlnp to see its name.

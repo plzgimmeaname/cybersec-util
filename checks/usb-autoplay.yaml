@@ -1,0 +1,17 @@
+# usb drives that start things by themselves
+id: usb-autoplay
+title: USB autoplay
+category: device
+why: A plugged-in USB drive could open or run something without you clicking.
+platforms: [windows]
+severity: low
+probe: usb_autoplay
+expect:
+  status: "off"
+benchmark: CIS 10.3 · NIST MP-7
+open:
+  windows: ms-settings:autoplay
+fix:
+  windows:
+    - Open Settings → Bluetooth & devices → AutoPlay.
+    - Turn off "Use AutoPlay for all media and devices".

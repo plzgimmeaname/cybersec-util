@@ -1,6 +1,7 @@
 const sh = require('./sh')
 const { summarize } = require('./ports')
 const { browser_extensions } = require('./extensions')
+const { ssh_keys, hosts_file, judgeDns } = require('./common')
 const fs = require('fs')
 const path = require('path')
 const os = require('os')
@@ -96,8 +97,8 @@ async function user_is_admin () {
   if (!r.ok) return { status: 'unknown', detail: r.err }
   const user = process.env.USER || 'you'
   return r.out.split(/\s+/).includes('admin')
-    ? { status: 'admin', detail: `${user} is an admin account` }
-    : { status: 'standard', detail: `${user} is a standard account` }
+    ? { status: 'admin', detail: `your account (${user}) is an admin account` }
+    : { status: 'standard', detail: `your account (${user}) is a standard account` }
 }
 
 // netstat -v shows every app's sockets without needing a password
@@ -199,6 +200,53 @@ async function guest_accounts () {
     : { status: 'closed', detail: `guest is off, ${people.length} account${people.length === 1 ? '' : 's'} on this mac`, items }
 }
 
+async function dns_servers () {
+  const r = await sh('/usr/sbin/scutil', ['--dns'])
+  return judgeDns([...r.out.matchAll(/nameserver\[\d+\]\s*:\s*(\S+)/g)].map(m => m[1]))
+}
+
+// macos only shares names of saved networks, but shows how the current one is secured
+async function wifi_networks () {
+  const ports = await sh('/usr/sbin/networksetup', ['-listallhardwareports'])
+  const dev = (ports.out.match(/Hardware Port: Wi-Fi\s*\nDevice: (\S+)/) || [])[1]
+  if (!dev) return { status: 'info', detail: 'this mac has no wi-fi' }
+
+  const saved = await sh('/usr/sbin/networksetup', ['-listpreferredwirelessnetworks', dev])
+  const names = saved.out.split('\n').slice(1).map(s => s.trim()).filter(Boolean)
+  const prof = await sh('/usr/sbin/system_profiler', ['SPAirPortDataType', '-json'], { timeout: 30000 })
+  let cur = null
+  try {
+    const ifs = JSON.parse(prof.out).SPAirPortDataType[0].spairport_airport_interfaces
+    cur = (ifs.find(i => i.spairport_current_network_information) || {}).spairport_current_network_information
+  } catch {}
+
+  const mode = cur ? String(cur.spairport_security_mode || '').replace('spairport_security_mode_', '').replace(/_/g, ' ') : ''
+  const weak = /^(none|wep)/.test(mode)
+  const items = names.map(n => ({ text: n, note: cur && n === cur._name ? `connected now, ${mode || 'unknown security'}` : 'saved', flag: !!(cur && n === cur._name && weak) }))
+  if (cur && weak) return { status: 'open', detail: `connected to ${cur._name || 'a network'} with ${mode === 'none' ? 'no password' : 'old wep security'}`, items }
+  return { status: 'safe', detail: cur ? `current wi-fi uses ${mode}, ${names.length} saved networks` : `${names.length} saved networks`, items }
+}
+
+// time machine dates are readable without admin; icloud only syncs, it isn't a real backup
+async function backup_status () {
+  const tm = await sh('/usr/bin/plutil', ['-convert', 'json', '-o', '-', '/Library/Preferences/com.apple.TimeMachine.plist'])
+  let dests = []
+  try { dests = JSON.parse(tm.out).Destinations || [] } catch {}
+  const dates = dests.flatMap(d => d.SnapshotDates || []).map(d => new Date(d)).filter(d => !isNaN(d))
+  const icloud = fs.existsSync(path.join(os.homedir(), 'Library/Mobile Documents/com~apple~CloudDocs/Documents'))
+
+  if (dates.length) {
+    const last = new Date(Math.max(...dates))
+    const days = Math.floor((Date.now() - last) / 864e5)
+    return days <= 14
+      ? { status: 'on', detail: `time machine, last backup ${days === 0 ? 'today' : `${days} day${days === 1 ? '' : 's'} ago`}` }
+      : { status: 'old', detail: `time machine's last backup was ${days} days ago` }
+  }
+  if (dests.length) return { status: 'old', detail: 'time machine is set up but no backup has finished yet' }
+  if (icloud) return { status: 'cloud', detail: 'icloud syncs desktop and documents, but there is no backup with older versions' }
+  return { status: 'off', detail: 'no backup found' }
+}
+
 module.exports = {
   disk_encryption_status,
   firewall_status,
@@ -212,5 +260,10 @@ module.exports = {
   startup_items,
   secure_boot_status,
   guest_accounts,
-  browser_extensions
+  browser_extensions,
+  dns_servers,
+  wifi_networks,
+  backup_status,
+  ssh_keys,
+  hosts_file
 }

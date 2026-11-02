@@ -1,0 +1,28 @@
+# a copy of your files somewhere else, with older versions
+id: backups
+title: Backups
+category: device
+why: If your drive breaks or ransomware locks your files, a backup is how you get them back.
+platforms: [windows, macos, linux]
+severity: medium
+probe: backup_status
+expect:
+  status: "on"
+benchmark: CIS 11.2 · NIST CP-9
+open:
+  macos: x-apple.systempreferences:com.apple.Time-Machine-Settings.extension
+  windows: ms-settings:backup
+fix:
+  macos:
+    - Plug in an external drive (or use a network drive).
+    - Open System Settings → General → Time Machine.
+    - Click Add Backup Disk, pick the drive, and turn on encryption.
+    - Leave the drive plugged in now and then so backups can run.
+  windows:
+    - Plug in an external drive.
+    - Open Control Panel → File History and click Turn on.
+    - Or open Settings → Accounts → Windows backup to back up folders to OneDrive.
+  linux:
+    - GNOME - open the Backups app (Déjà Dup). Install it with sudo apt install deja-dup if needed.
+    - Pick a drive or cloud folder and turn on automatic backups.
+    - Timeshift saves your system, but use Déjà Dup for your own files.

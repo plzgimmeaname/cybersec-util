@@ -30,6 +30,19 @@ function loadChecks () {
     })
 }
 
+// only system settings links, never web pages or files
+const SAFE_LINK = /^(x-apple\.systempreferences:|ms-settings:)[\w.?=&-]*$/
+
+function settingsLink (check, os) {
+  const link = check.open && check.open[os]
+  return link && SAFE_LINK.test(link) ? link : null
+}
+
+function linkFor (id) {
+  const check = loadChecks().find(c => c.id === id)
+  return check ? settingsLink(check, platform()) : null
+}
+
 // every key in expect must match what the probe saw
 function matches (actual, expect) {
   return Object.entries(expect || {}).every(([k, v]) => actual[k] === v)
@@ -42,6 +55,8 @@ async function runCheck (check, probes, os) {
     why: check.why,
     severity: check.severity,
     benchmark: check.benchmark,
+    category: check.category || 'other',
+    settings: !!settingsLink(check, os),
     fix: (check.fix && check.fix[os]) || []
   }
   if (check.broken) return { ...base, state: 'unknown', detail: check.broken }
@@ -93,4 +108,4 @@ async function run (onProgress = () => {}) {
   return { os, score: score(results), results, time: new Date().toISOString() }
 }
 
-module.exports = { platform, run, loadChecks, score }
+module.exports = { platform, run, loadChecks, score, linkFor }

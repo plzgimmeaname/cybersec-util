@@ -1,7 +1,7 @@
 {
   "name": "security-checkup",
   "productName": "Security Checkup",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "checks the security of your own computer and tells you what to fix",
   "main": "src/main.js",
   "license": "MIT",
@@ -19,7 +19,8 @@
       "src/**",
       "ui/**",
       "checks/**",
-      "package.json"
+      "package.json",
+      "build/icon.png"
     ],
     "mac": {
       "target": "dmg",
@@ -31,7 +32,8 @@
     "linux": {
       "target": "AppImage",
       "category": "Utility"
-    }
+    },
+    "icon": "build/icon.png"
   },
   "dependencies": {
     "js-yaml": "^5.5.0"

@@ -1,25 +1,28 @@
 # everyday work in a normal account, admin only when needed
 id: admin-user
-title: everyday account
-why: if a bad app runs in an admin account, it can take over the whole computer
+title: Everyday account
+category: accounts
+why: If a bad app runs in an admin account, it can take over the whole computer.
 platforms: [windows, macos, linux]
 severity: medium
 probe: user_is_admin
 expect:
   status: "standard"
-benchmark: cis 5.4 / nist ac-6
-
+benchmark: CIS 5.4 · NIST AC-6
+open:
+  macos: x-apple.systempreferences:com.apple.Users-Groups-Settings.extension
+  windows: ms-settings:otherusers
 fix:
   macos:
-    - open system settings → users & groups
-    - click add user, make a new administrator account (for example "admin")
-    - log into the new admin account, then turn off "allow this user to administer this computer" for your normal one
-    - when your mac asks for an admin password, use the new account's name and password
+    - Open System Settings → Users & Groups.
+    - Click Add User and make a new Administrator account (for example "Admin").
+    - Log into the new account, then turn off "Allow this user to administer this computer" for your normal one.
+    - When your Mac asks for an admin password, use the new account's name and password.
   windows:
-    - open the start menu and search "other users"
-    - add a new account and set its type to administrator
-    - sign in with the new account, then change your normal account type to standard user
-    - when windows asks for permission, type the admin account's password
+    - Open Settings → Accounts → Other users.
+    - Add a new account and set its type to Administrator.
+    - Sign in with the new account, then change your normal account type to Standard User.
+    - When Windows asks for permission, type the admin account's password.
   linux:
-    - on linux it's normal to use sudo from your own account
-    - just make sure your password is strong and only type it when you trust what you ran
+    - On Linux it's normal to use sudo from your own account.
+    - Just make sure your password is strong and only type it when you trust what you ran.

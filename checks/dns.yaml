@@ -1,0 +1,26 @@
+# the "phone book" your computer asks to find websites
+id: dns
+title: DNS servers
+category: network
+why: Whoever answers these lookups can send you to fake websites. Malware sometimes changes them.
+platforms: [windows, macos, linux]
+severity: low
+probe: dns_servers
+expect:
+  status: "ok"
+benchmark: CIS 9.2 · NIST SC-20
+open:
+  macos: x-apple.systempreferences:com.apple.Network-Settings.extension
+  windows: ms-settings:network-status
+fix:
+  macos:
+    - If you set these yourself (or your work or VPN did), this is fine.
+    - Otherwise open System Settings → Network → your connection → Details → DNS.
+    - Remove the unknown servers, or add 1.1.1.1 or 9.9.9.9.
+  windows:
+    - If you set these yourself (or your work or VPN did), this is fine.
+    - Otherwise open Settings → Network & internet → your connection → DNS server assignment → Edit.
+    - Set it to Automatic, or enter 1.1.1.1 or 9.9.9.9.
+  linux:
+    - If you set these yourself (or your work or VPN did), this is fine.
+    - Otherwise open your network settings → IPv4 → DNS and set it to Automatic.

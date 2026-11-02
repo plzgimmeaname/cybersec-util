@@ -1,0 +1,23 @@
+# keys that sign you into other computers, and who can sign into this one
+id: ssh-keys
+title: SSH keys
+category: accounts
+why: An SSH key works like a password. If another user can read it, they can sign in as you.
+platforms: [windows, macos, linux]
+severity: medium
+probe: ssh_keys
+expect:
+  status: "ok"
+benchmark: CIS 5.2 · NIST IA-5
+fix:
+  macos:
+    - Open Terminal and type chmod 700 ~/.ssh && chmod 600 ~/.ssh/id_* and press Enter.
+    - Keys with "no passphrase" work for anyone who copies the file. Add one with ssh-keygen -p -f ~/.ssh/<key name>
+    - If you see a "can sign in here" line you don't recognize, remove it from ~/.ssh/authorized_keys
+  windows:
+    - Keys with "no passphrase" work for anyone who copies the file. Add one with ssh-keygen -p -f %USERPROFILE%\.ssh\<key name>
+    - If you see a "can sign in here" line you don't recognize, remove it from your authorized_keys file.
+  linux:
+    - Open the command window and type chmod 700 ~/.ssh && chmod 600 ~/.ssh/id_* and press Enter.
+    - Keys with "no passphrase" work for anyone who copies the file. Add one with ssh-keygen -p -f ~/.ssh/<key name>
+    - If you see a "can sign in here" line you don't recognize, remove it from ~/.ssh/authorized_keys

@@ -2,6 +2,7 @@ const fs = require('fs')
 const sh = require('./sh')
 const { summarize } = require('./ports')
 const { browser_extensions } = require('./extensions')
+const { ssh_keys, hosts_file, judgeDns } = require('./common')
 const path = require('path')
 const os = require('os')
 
@@ -132,7 +133,7 @@ async function user_is_admin () {
   const groups = r.out.split(/\s+/).filter(g => ['sudo', 'wheel', 'admin'].includes(g))
   return groups.length
     ? { status: 'admin', detail: `${user} can use sudo (group: ${groups.join(', ')})` }
-    : { status: 'standard', detail: `${user} is a standard account` }
+    : { status: 'standard', detail: `your account (${user}) is a standard account` }
 }
 
 // ss shows app names only for your own apps without sudo
@@ -272,6 +273,46 @@ async function guest_accounts () {
     : { status: 'closed', detail: 'no guest or passwordless accounts', items }
 }
 
+// systemd-resolved hides real servers behind 127.0.0.53, so ask it first
+async function dns_servers () {
+  const r = await sh('resolvectl', ['dns'])
+  let servers = [...r.out.matchAll(/:\s*(.+)$/gm)].flatMap(m => m[1].trim().split(/\s+/)).filter(s => /^[\d.:a-f]+$/i.test(s))
+  if (!servers.length) servers = [...read('/etc/resolv.conf').matchAll(/^nameserver\s+(\S+)/gm)].map(m => m[1])
+  return judgeDns(servers)
+}
+
+async function wifi_networks () {
+  const list = await sh('nmcli', ['-t', '-f', 'NAME,TYPE', 'connection', 'show'])
+  if (!list.ok) return { status: 'unknown', detail: 'could not ask networkmanager (nmcli) about wi-fi' }
+  const names = list.out.split('\n').filter(l => /:802-11-wireless$/.test(l)).map(l => l.replace(/:802-11-wireless$/, '').replace(/\\:/g, ':'))
+  const items = []
+  for (const n of names) {
+    const k = await sh('nmcli', ['-t', '-g', '802-11-wireless-security.key-mgmt', 'connection', 'show', n])
+    const mgmt = k.out.trim()
+    const open = !mgmt || mgmt === 'none'
+    items.push({ text: n, note: open ? (mgmt === 'none' ? 'old wep security' : 'no password') : mgmt, flag: open })
+  }
+  const open = items.filter(i => i.flag).length
+  if (!items.length) return { status: 'safe', detail: 'no saved wi-fi networks' }
+  return open
+    ? { status: 'open', detail: `${open} saved network${open === 1 ? ' has' : 's have'} no password`, items }
+    : { status: 'safe', detail: `${items.length} saved networks, all with passwords`, items }
+}
+
+// deja dup (gnome backups) or timeshift
+async function backup_status () {
+  const last = await sh('gsettings', ['get', 'org.gnome.DejaDup', 'last-backup'])
+  const when = new Date(last.out.replace(/'/g, ''))
+  if (last.ok && !isNaN(when)) {
+    const days = Math.floor((Date.now() - when) / 864e5)
+    return days <= 14
+      ? { status: 'on', detail: `backups (deja dup), last one ${days === 0 ? 'today' : `${days} day${days === 1 ? '' : 's'} ago`}` }
+      : { status: 'old', detail: `backups (deja dup) last ran ${days} days ago` }
+  }
+  if (fs.existsSync('/etc/timeshift/timeshift.json')) return { status: 'on', detail: 'timeshift is set up (saves the system, not always your files)' }
+  return { status: 'off', detail: 'no backup found (looked for deja dup and timeshift)' }
+}
+
 module.exports = {
   disk_encryption_status,
   firewall_status,
@@ -285,5 +326,10 @@ module.exports = {
   startup_items,
   secure_boot_status,
   guest_accounts,
-  browser_extensions
+  browser_extensions,
+  dns_servers,
+  wifi_networks,
+  backup_status,
+  ssh_keys,
+  hosts_file
 }

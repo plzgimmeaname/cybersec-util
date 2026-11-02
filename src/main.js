@@ -10,17 +10,23 @@ const report = require('./report')
 const dataDir = app.getPath('userData')
 process.env.CHECKUP_DATA = dataDir
 
+const mac = process.platform === 'darwin'
+const iconPath = path.join(__dirname, '..', 'build', 'icon.png')
 let last = null // latest scan, for saving
 let savedPath = null // only this file can be shown in the folder
 
 function createWindow () {
   const win = new BrowserWindow({
-    width: 780,
-    height: 800,
-    minWidth: 480,
-    minHeight: 480,
-    title: 'security checkup',
-    backgroundColor: nativeTheme.shouldUseDarkColors ? '#141414' : '#fafafa',
+    width: 1080,
+    height: 760,
+    minWidth: 720,
+    minHeight: 520,
+    title: 'Security Checkup',
+    show: false,
+    icon: iconPath,
+    // mac gets the modern inset traffic lights over the sidebar
+    ...(mac ? { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 18, y: 18 } } : {}),
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#111214' : '#f6f6f7',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -33,11 +39,20 @@ function createWindow () {
   win.setMenuBarVisibility(false)
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
   win.webContents.on('will-navigate', e => e.preventDefault())
+  win.once('ready-to-show', () => win.show())
 
   win.loadFile(path.join(__dirname, '..', 'ui', 'index.html'))
 }
 
-ipcMain.handle('info', () => ({ host: os.hostname(), os: engine.platform() }))
+ipcMain.handle('info', () => ({
+  host: os.hostname(),
+  os: engine.platform(),
+  osVersion: os.release(),
+  version: app.getVersion(),
+  mac,
+  checks: engine.loadChecks().filter(c => (c.platforms || []).includes(engine.platform())).length,
+  hasHistory: history.list(dataDir).length > 0
+}))
 
 ipcMain.handle('scan', async e => {
   const r = await engine.run(p => {
@@ -56,14 +71,38 @@ ipcMain.handle('accept', () => {
   return since
 })
 
+ipcMain.handle('history', () => history.list(dataDir))
+
+ipcMain.handle('reset', async e => {
+  const { response } = await dialog.showMessageBox(BrowserWindow.fromWebContents(e.sender), {
+    type: 'warning',
+    buttons: ['Cancel', 'Clear history'],
+    defaultId: 0,
+    cancelId: 0,
+    message: 'Clear all past checkups?',
+    detail: 'Your score history and known-good checkup will be deleted. The next checkup starts fresh.'
+  })
+  if (response !== 1) return false
+  history.reset(dataDir)
+  return true
+})
+
+// the renderer only sends a check id, the link itself comes from the check file
+ipcMain.handle('open-settings', (e, id) => {
+  const link = engine.linkFor(String(id))
+  if (link) shell.openExternal(link)
+  return !!link
+})
+
+ipcMain.handle('open-data', () => shell.openPath(dataDir))
+
 ipcMain.handle('save', async (e, format) => {
   if (!last) return null
   const ext = format === 'json' ? 'json' : 'html'
   const day = new Date(last.time).toISOString().slice(0, 10)
-  const win = BrowserWindow.fromWebContents(e.sender)
-  const { canceled, filePath } = await dialog.showSaveDialog(win, {
+  const { canceled, filePath } = await dialog.showSaveDialog(BrowserWindow.fromWebContents(e.sender), {
     defaultPath: path.join(app.getPath('documents'), `security-checkup-${day}.${ext}`),
-    filters: [ext === 'json' ? { name: 'json', extensions: ['json'] } : { name: 'web page', extensions: ['html'] }]
+    filters: [ext === 'json' ? { name: 'JSON', extensions: ['json'] } : { name: 'Web page', extensions: ['html'] }]
   })
   if (canceled || !filePath) return null
   fs.writeFileSync(filePath, ext === 'json' ? report.toJson(last) : report.toHtml(last))
@@ -76,6 +115,8 @@ ipcMain.handle('reveal', () => {
 })
 
 app.whenReady().then(() => {
+  // dock icon while running with npm start
+  if (mac && app.dock && fs.existsSync(iconPath)) app.dock.setIcon(iconPath)
   createWindow()
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
@@ -83,5 +124,5 @@ app.whenReady().then(() => {
 })
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit()
+  if (!mac) app.quit()
 })

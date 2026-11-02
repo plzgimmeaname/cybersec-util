@@ -1,0 +1,24 @@
+# a local list that overrides where websites point
+id: hosts-file
+title: Hosts file
+category: network
+why: Malware edits this file to send real websites, like your bank, to fake ones.
+platforms: [windows, macos, linux]
+severity: medium
+probe: hosts_file
+expect:
+  status: "clean"
+benchmark: CIS 9.2 · NIST SI-7
+fix:
+  macos:
+    - If you added these lines yourself (for example for web development), this is fine.
+    - Otherwise open Terminal and type sudo nano /etc/hosts
+    - Delete the lines for the websites marked above, press Ctrl + O, Enter, then Ctrl + X.
+  windows:
+    - If you added these lines yourself, this is fine.
+    - Otherwise open Notepad as administrator, then File → Open → C:\Windows\System32\drivers\etc\hosts (show all files).
+    - Delete the lines for the websites marked above and save.
+  linux:
+    - If you added these lines yourself, this is fine.
+    - Otherwise type sudo nano /etc/hosts
+    - Delete the lines for the websites marked above, press Ctrl + O, Enter, then Ctrl + X.

@@ -46,26 +46,41 @@ Type this and press Enter:
 npm start
 ```
 
-The app opens. Click **run checkup**.
+The app opens. Click **Run checkup**. It takes about a minute.
 
-- Green means good
-- Yellow means okay
-- Red means you should fix it
+- Green check means good
+- Red X means you should fix it
+- Gray means the app could not check it
 
-Click on anything in the list to see how to fix it.
+### Find your way around
+
+On the left side there are 5 pages:
+
+- **Overview:** your score out of 100, and the 3 most important things to fix.
+- **Checks:** every check. Click one to see what was found and how to fix it.
+- **Changes:** what is new or gone since last time.
+- **History:** your score over time.
+- **About & privacy:** what the app reads and what it sends.
+
+### Fix something
+
+Many problems have an **Open settings** button. Click it. The right settings page opens for you.
+Then follow the steps under **How to fix**.
+
+When you are done, click **Run again** to see your new score.
 
 ### Save your results
 
-Click **web page** or **json** under your score. Pick where to save it.
+Click **Export** at the top. Pick **Web page** or **Data file**. Pick where to save it.
 The web page opens in any browser. You can print it too.
 
 ### See what changed
 
 The first time you run it, the app remembers how your computer looks.
 
-Every time after that, it shows what is new or gone. For example, a new browser add-on.
+Every time after that, the **Changes** page shows what is new or gone. For example, a new browser add-on.
 
-If you made the change yourself, click **these are fine**.
+If you made the change yourself, click **These are fine**.
 
 ### Stop the app
 
@@ -119,6 +134,13 @@ Your computer may say it does not know who made the app. That is okay.
 - [x] Save your results
 - [x] What changed since last time?
 - [x] Do you have old apps that are not safe?
+- [x] Are your SSH keys locked? (SSH keys let you sign in to other computers)
+- [x] Has anyone changed where websites go? (the hosts file)
+- [x] Who helps your computer find websites? (DNS)
+- [x] Are your saved Wi-Fi networks safe?
+- [x] Do you have a backup of your files?
+- [x] Do USB drives start things by themselves? (Windows only)
+- [x] Can PowerShell run any script? (Windows only)
 
 ---
 
@@ -135,4 +157,4 @@ Your results stay on your computer. They are in this folder:
 - **Windows:** `%APPDATA%\Security Checkup`
 - **Linux:** `~/.config/Security Checkup`
 
-Delete that folder to start fresh.
+Delete that folder to start fresh. Or go to **History** and click **Clear history**.

@@ -1,0 +1,17 @@
+# whether powershell will run any script it's handed
+id: script-policy
+title: PowerShell scripts
+category: apps
+why: If PowerShell runs any script, a downloaded file can take over more easily.
+platforms: [windows]
+severity: low
+probe: script_policy
+expect:
+  status: "safe"
+benchmark: CIS 2.7 · NIST CM-7
+fix:
+  windows:
+    - Open the Start menu, type PowerShell, and open it.
+    - Type Set-ExecutionPolicy RemoteSigned -Scope CurrentUser and press Enter.
+    - Press Y to confirm.
+    - If it still says Unrestricted, a company policy sets it. Ask whoever set up the computer.

@@ -2,89 +2,202 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'">
-  <title>security checkup</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:">
+  <title>Security Checkup</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header class="bar">
-    <div class="bar-inner">
-      <div>
-        <h1>security checkup</h1>
-        <p id="machine" class="muted small">…</p>
-      </div>
-      <button id="scan" class="primary" title="ctrl / cmd + r"><span class="spinner"></span><span id="scan-label">run checkup</span></button>
-    </div>
-    <div id="progress" class="progress" hidden><div id="progress-fill" class="progress-fill"></div></div>
-  </header>
-
-  <main>
-    <section id="summary" class="card summary" hidden>
-      <div class="ring-wrap">
-        <svg class="ring" viewBox="0 0 64 64" aria-hidden="true">
-          <circle class="track" cx="32" cy="32" r="28"></circle>
-          <circle id="arc" class="arc" cx="32" cy="32" r="28"></circle>
-        </svg>
-        <span id="score-num" class="score-num">–</span>
-      </div>
-      <div class="summary-text">
-        <p id="verdict" class="verdict"></p>
-        <p id="counts" class="counts"></p>
-        <p id="first" class="first"></p>
-      </div>
-      <div class="summary-side">
-        <svg id="trend" class="trend" viewBox="0 0 96 28" aria-label="score over past checkups" hidden></svg>
-        <p id="when" class="muted small"></p>
-        <button id="how-btn" class="link small" aria-expanded="false">how is this scored?</button>
-      </div>
-      <p id="how" class="how small muted" hidden>
-        each check has a size: critical 40, high 25, medium 15, low 5.
-        your score is the share of those points you pass. unknowns and notes don't count.
-        the line on the right is your score over the last checkups.
-      </p>
-      <div class="save-row">
-        <span class="muted small">save report as</span>
-        <button class="chip" data-save="html">web page</button>
-        <button class="chip" data-save="json">json</button>
-        <span id="saved" class="small saved"></span>
-      </div>
-    </section>
-
-    <section id="drift" class="card drift" hidden>
-      <div class="drift-head">
+  <div class="app">
+    <aside class="sidebar">
+      <div class="drag"></div>
+      <div class="brand">
+        <span class="logo" data-icon="shield"></span>
         <div>
-          <p class="drift-title" id="drift-title"></p>
-          <p class="muted small" id="drift-sub"></p>
+          <p class="brand-name">Security Checkup</p>
+          <p class="brand-sub" id="brand-sub">…</p>
         </div>
-        <button id="accept" class="chip" hidden>these are fine</button>
       </div>
-      <ul id="drift-list" class="changes"></ul>
-    </section>
 
-    <section id="empty" class="empty">
-      <div class="shield" aria-hidden="true"></div>
-      <p class="empty-title">see how safe this computer is</p>
-      <p class="muted">14 quick checks. nothing gets changed, it only reads.</p>
-    </section>
+      <nav class="nav" aria-label="Pages">
+        <button class="nav-item active" data-view="overview"><span data-icon="grid"></span>Overview</button>
+        <button class="nav-item" data-view="checks"><span data-icon="list"></span>Checks<span class="badge" id="badge-checks" hidden></span></button>
+        <button class="nav-item" data-view="changes"><span data-icon="changes"></span>Changes<span class="badge" id="badge-changes" hidden></span></button>
+        <button class="nav-item" data-view="history"><span data-icon="clock"></span>History</button>
+        <button class="nav-item" data-view="about"><span data-icon="info"></span>About &amp; privacy</button>
+      </nav>
 
-    <section id="live" class="card live" hidden>
-      <p class="live-title"><span id="live-count">0</span> of <span id="live-total">0</span> done <span class="muted small">· updates can take a minute or two</span></p>
-      <ul id="live-list" class="live-list"></ul>
-    </section>
-
-    <section id="fix-group" class="group" hidden>
-      <div class="group-head">
-        <h2>to fix <span id="fix-count" class="muted"></span></h2>
-        <button id="toggle-all" class="link small">collapse all</button>
+      <div class="sidebar-foot">
+        <p class="machine" id="machine">…</p>
+        <p class="muted tiny" id="last-run">Not checked yet</p>
       </div>
-      <ul id="fix-list" class="list"></ul>
-    </section>
+    </aside>
 
-    <section id="ok-group" class="group" hidden>
-      <div class="group-head"><h2>all good <span id="ok-count" class="muted"></span></h2></div>
-      <ul id="ok-list" class="list"></ul>
-    </section>
-  </main>
+    <div class="content">
+      <header class="topbar">
+        <div class="drag"></div>
+        <div>
+          <h1 id="page-title">Overview</h1>
+          <p class="muted" id="page-sub">How secure this computer is right now</p>
+        </div>
+        <div class="actions">
+          <div class="menu-wrap">
+            <button id="export" class="btn" disabled aria-haspopup="true" aria-expanded="false"><span data-icon="download"></span>Export</button>
+            <div id="export-menu" class="menu" hidden>
+              <button data-save="html">Web page <span class="muted">.html</span></button>
+              <button data-save="json">Data file <span class="muted">.json</span></button>
+            </div>
+          </div>
+          <button id="scan" class="btn primary" title="Ctrl / Cmd + R"><span class="spinner"></span><span data-icon="refresh" class="scan-icon"></span><span id="scan-label">Run checkup</span></button>
+        </div>
+        <div id="progress" class="progress" hidden><div id="progress-fill" class="progress-fill"></div></div>
+      </header>
+
+      <main id="main">
+        <!-- overview -->
+        <section class="view" id="view-overview">
+          <div id="welcome" class="welcome card">
+            <span class="welcome-icon" data-icon="shield"></span>
+            <h2>Check how secure this computer is</h2>
+            <p class="muted">Security Checkup looks at the settings that matter most and tells you, in plain words, what to fix.</p>
+            <ul class="promises">
+              <li><span data-icon="eye"></span><div><b>Only looks</b><span>Nothing on your computer is changed.</span></div></li>
+              <li><span data-icon="clock"></span><div><b>About a minute</b><span><span id="check-count">20</span> checks, most finish in seconds.</span></div></li>
+              <li><span data-icon="lock"></span><div><b>Stays private</b><span>Results are saved only on this computer.</span></div></li>
+            </ul>
+            <button class="btn primary big" data-action="scan">Run your first checkup</button>
+          </div>
+
+          <div id="live" class="card live" hidden>
+            <div class="live-head">
+              <div>
+                <h2>Checking this computer…</h2>
+                <p class="muted"><span id="live-count">0</span> of <span id="live-total">0</span> done · checking updates online can take a minute</p>
+              </div>
+            </div>
+            <ul id="live-list" class="live-list"></ul>
+          </div>
+
+          <div id="results" hidden>
+            <div class="hero card">
+              <div class="ring-wrap">
+                <svg class="ring" viewBox="0 0 64 64" aria-hidden="true">
+                  <circle class="track" cx="32" cy="32" r="28"></circle>
+                  <circle id="arc" class="arc" cx="32" cy="32" r="28"></circle>
+                </svg>
+                <div class="ring-label"><span id="score-num">–</span><span class="muted tiny">of 100</span></div>
+              </div>
+              <div class="hero-text">
+                <p id="verdict" class="verdict"></p>
+                <p id="verdict-sub" class="muted"></p>
+                <div id="counts" class="counts"></div>
+              </div>
+              <div class="hero-side">
+                <svg id="trend" class="trend" viewBox="0 0 120 36" aria-label="Score over recent checkups" hidden></svg>
+                <p id="trend-label" class="muted tiny"></p>
+              </div>
+            </div>
+
+            <div id="drift-banner" class="banner" hidden>
+              <span data-icon="changes"></span>
+              <p id="drift-banner-text"></p>
+              <button class="btn small" data-go="changes">Review</button>
+            </div>
+
+            <div class="section-head"><h3>Fix these first</h3><button class="link" data-go="checks" data-filter="attention">See all issues</button></div>
+            <div id="top-fixes" class="stack"></div>
+
+            <div class="section-head"><h3>By area</h3></div>
+            <div id="areas" class="areas"></div>
+          </div>
+        </section>
+
+        <!-- checks -->
+        <section class="view" id="view-checks" hidden>
+          <div class="toolbar">
+            <div class="segmented" role="tablist" aria-label="Show">
+              <button data-filter="all" class="on">All</button>
+              <button data-filter="attention">Needs attention</button>
+              <button data-filter="passed">Passed</button>
+            </div>
+            <div class="chips" id="area-chips"></div>
+          </div>
+          <div id="check-groups"></div>
+          <div id="checks-empty" class="empty card" hidden>
+            <span data-icon="list"></span>
+            <p>Run a checkup to see the results here.</p>
+          </div>
+        </section>
+
+        <!-- changes -->
+        <section class="view" id="view-changes" hidden>
+          <div class="card pad">
+            <div class="row-between">
+              <div>
+                <h2 id="drift-title">No checkup yet</h2>
+                <p class="muted" id="drift-sub">After your first checkup, this page shows anything that changes on your computer.</p>
+              </div>
+              <button id="accept" class="btn" hidden><span data-icon="check"></span>These are fine</button>
+            </div>
+            <ul id="drift-list" class="changes"></ul>
+          </div>
+          <p class="muted small note">Changes are compared with your known-good checkup. New apps, add-ons, accounts or open ports that you didn't add yourself are worth a closer look.</p>
+        </section>
+
+        <!-- history -->
+        <section class="view" id="view-history" hidden>
+          <div class="card pad">
+            <h2>Score over time</h2>
+            <svg id="chart" class="chart" viewBox="0 0 640 200" role="img" aria-label="Score history chart"></svg>
+            <p id="chart-empty" class="muted" hidden>Run a few checkups to see your score over time.</p>
+          </div>
+          <div class="section-head"><h3>Past checkups</h3><button class="link danger" id="reset">Clear history</button></div>
+          <div class="card">
+            <table class="table">
+              <thead><tr><th>Date</th><th>Score</th><th>Issues</th></tr></thead>
+              <tbody id="history-rows"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- about -->
+        <section class="view" id="view-about" hidden>
+          <div class="card pad about-head">
+            <span class="logo big" data-icon="shield"></span>
+            <div>
+              <h2>Security Checkup</h2>
+              <p class="muted">Version <span id="version">–</span> · checks follow CIS Controls v8 and NIST SP 800-53</p>
+            </div>
+          </div>
+
+          <div class="grid2">
+            <div class="card pad">
+              <h3>What it reads</h3>
+              <p class="muted">Settings and lists on this computer: security settings, app names and versions, startup items, accounts, browser add-on names, and network settings. It never reads your documents, passwords or browsing history, and it never changes anything.</p>
+            </div>
+            <div class="card pad">
+              <h3>What goes online</h3>
+              <p class="muted">Only two things. The update check asks Apple, Microsoft or your Linux system if updates are waiting. The unsafe-versions check sends app names and version numbers (like "chrome 141") to nvd.nist.gov, the U.S. government's vulnerability list.</p>
+            </div>
+            <div class="card pad">
+              <h3>Your data</h3>
+              <p class="muted">Past checkups are saved on this computer only, so you can see what changed.</p>
+              <div class="btn-row">
+                <button class="btn small" id="open-data"><span data-icon="folder"></span>Open data folder</button>
+              </div>
+            </div>
+            <div class="card pad">
+              <h3>Shortcuts</h3>
+              <dl class="keys">
+                <dt><kbd class="mod">Ctrl</kbd> <kbd>R</kbd></dt><dd>Run a checkup</dd>
+                <dt><kbd class="mod">Ctrl</kbd> <kbd>1</kbd>–<kbd>5</kbd></dt><dd>Switch pages</dd>
+              </dl>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+  <div id="toasts" class="toasts" aria-live="polite"></div>
   <script src="app.js"></script>
 </body>
 </html>

@@ -18,7 +18,8 @@ function snapshot (report) {
   for (const r of report.results) {
     checks[r.id] = { title: r.title, state: r.state, items: (r.items || []).map(i => i.text) }
   }
-  return { time: report.time, score: report.score, checks }
+  const fails = report.results.filter(r => r.state === 'fail').length
+  return { time: report.time, score: report.score, fails, checks }
 }
 
 function diff (base, now) {
@@ -43,6 +44,20 @@ function trend (history) {
     .map(f => readJson(path.join(history, f)))
     .filter(s => s && s.score != null)
     .map(s => ({ time: s.time, score: s.score }))
+}
+
+// every saved scan, newest first, for the history page
+function list (base) {
+  const d = dirs(base)
+  return fs.readdirSync(d.history).filter(f => f.endsWith('.json')).sort().reverse()
+    .map(f => readJson(path.join(d.history, f)))
+    .filter(Boolean)
+    .map(s => ({ time: s.time, score: s.score, fails: s.fails ?? Object.values(s.checks).filter(c => c.state === 'fail').length }))
+}
+
+function reset (base) {
+  fs.rmSync(path.join(base, 'history'), { recursive: true, force: true })
+  fs.rmSync(path.join(base, 'baseline.json'), { force: true })
 }
 
 // saves this scan, first scan ever becomes the baseline
@@ -72,4 +87,4 @@ function accept (base) {
   return readJson(d.baseline).time
 }
 
-module.exports = { record, accept, diff, snapshot }
+module.exports = { record, accept, diff, snapshot, list, reset }

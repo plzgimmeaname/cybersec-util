@@ -1,0 +1,23 @@
+# saved networks your computer joins by itself
+id: wifi
+title: Wi-Fi networks
+category: network
+why: Your computer rejoins saved networks without a password automatically, and anyone can fake those.
+platforms: [windows, macos, linux]
+severity: low
+probe: wifi_networks
+expect:
+  status: "safe"
+benchmark: CIS 12.6 · NIST AC-18
+open:
+  macos: x-apple.systempreferences:com.apple.wifi-settings-extension
+  windows: ms-settings:network-wifisettings
+fix:
+  macos:
+    - Avoid open networks, or use a VPN on them.
+    - Open System Settings → Wi-Fi → Advanced and remove networks you don't use anymore.
+  windows:
+    - Open Settings → Network & internet → Wi-Fi → Manage known networks.
+    - Click Forget on the networks marked "no password" that you don't need.
+  linux:
+    - Open your Wi-Fi settings and remove saved networks marked "no password" that you don't need.

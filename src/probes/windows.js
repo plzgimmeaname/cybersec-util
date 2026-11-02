@@ -1,6 +1,7 @@
 const sh = require('./sh')
 const { summarize } = require('./ports')
 const { browser_extensions } = require('./extensions')
+const { ssh_keys, hosts_file, judgeDns } = require('./common')
 
 // scripts go in base64 so windows never mangles their quotes
 const ps = (script, opts) => sh('powershell.exe', ['-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(script, 'utf16le').toString('base64')], opts)
@@ -162,7 +163,7 @@ async function user_is_admin () {
   const user = process.env.USERNAME || 'you'
   return r.out.includes('S-1-5-32-544')
     ? { status: 'admin', detail: `${user} is an administrator account` }
-    : { status: 'standard', detail: `${user} is a standard account` }
+    : { status: 'standard', detail: `your account (${user}) is a standard account` }
 }
 
 async function listening_ports () {
@@ -298,6 +299,75 @@ async function guest_accounts () {
     : { status: 'closed', detail: 'no guest or unused accounts', items }
 }
 
+async function dns_servers () {
+  const r = await ps(`
+    Get-DnsClientServerAddress -ErrorAction SilentlyContinue |
+      Where-Object { $_.ServerAddresses -and $_.InterfaceAlias -notmatch 'Loopback' } |
+      ForEach-Object { $_.ServerAddresses } | ForEach-Object { "dns=$_" }
+  `)
+  return judgeDns(r.out.split(/\r?\n/).filter(l => l.startsWith('dns=')).map(l => l.slice(4)))
+}
+
+// saved networks without a password join automatically, anyone can fake them
+async function wifi_networks () {
+  const r = await ps(`
+    $names = netsh wlan show profiles | Select-String 'Profile\\s*:\\s*(.+)$' | ForEach-Object { $_.Matches[0].Groups[1].Value.Trim() }
+    foreach ($n in $names) {
+      $a = netsh wlan show profile name="$n" | Select-String 'Authentication\\s*:\\s*(.+)$' | Select-Object -First 1 |
+        ForEach-Object { $_.Matches[0].Groups[1].Value.Trim() }
+      "wifi=$n|$a"
+    }
+    "done=1"
+  `, { timeout: 60000 })
+  if (!/done=1/.test(r.out)) return { status: 'unknown', detail: r.err || 'could not read saved wi-fi networks' }
+  const items = r.out.split(/\r?\n/).filter(l => l.startsWith('wifi=')).map(l => {
+    const i = l.lastIndexOf('|')
+    const name = l.slice(5, i)
+    const auth = l.slice(i + 1).trim()
+    const open = /^open$/i.test(auth)
+    return { text: name, note: open ? 'no password' : (auth || 'unknown').toLowerCase(), flag: open }
+  })
+  const open = items.filter(i => i.flag).length
+  if (!items.length) return { status: 'safe', detail: 'no saved wi-fi networks' }
+  return open
+    ? { status: 'open', detail: `${open} saved network${open === 1 ? ' has' : 's have'} no password`, items }
+    : { status: 'safe', detail: `${items.length} saved networks, all with passwords`, items }
+}
+
+// file history, or desktop / documents kept in onedrive
+async function backup_status () {
+  const r = await ps(`
+    "filehistory=$(Test-Path "$env:LOCALAPPDATA\\Microsoft\\Windows\\FileHistory\\Configuration\\Config1.xml")"
+    "docs=$((Get-ItemProperty 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders' -ErrorAction SilentlyContinue).Personal)"
+  `)
+  const o = lines(r.out)
+  if (o.filehistory == null) return { status: 'unknown', detail: r.err || 'could not read backup settings' }
+  if (o.filehistory === 'True') return { status: 'on', detail: 'file history is set up' }
+  if (/onedrive/i.test(o.docs || '')) return { status: 'cloud', detail: 'documents sync to onedrive, which keeps old versions for 30 days' }
+  return { status: 'off', detail: 'no backup found (file history is off, documents are not in onedrive)' }
+}
+
+// 255 in NoDriveTypeAutoRun turns autorun off for every drive type
+async function usb_autoplay () {
+  const r = await ps(`
+    "nodrive=$((Get-ItemProperty 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer' -ErrorAction SilentlyContinue).NoDriveTypeAutoRun)"
+    "disable=$((Get-ItemProperty 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\AutoplayHandlers' -ErrorAction SilentlyContinue).DisableAutoplay)"
+  `)
+  const o = lines(r.out)
+  if (o.nodrive == null && o.disable == null) return { status: 'unknown', detail: r.err || 'could not read autoplay settings' }
+  if (o.nodrive === '255' || o.disable === '1') return { status: 'off', detail: 'autoplay is off' }
+  return { status: 'on', detail: 'autoplay is on, usb drives can start things when plugged in' }
+}
+
+async function script_policy () {
+  const r = await ps('"policy=$(Get-ExecutionPolicy)"')
+  const policy = lines(r.out).policy
+  if (!policy) return { status: 'unknown', detail: r.err || 'could not read the powershell policy' }
+  return /^(unrestricted|bypass)$/i.test(policy)
+    ? { status: 'open', detail: `powershell runs any script (${policy.toLowerCase()})` }
+    : { status: 'safe', detail: `powershell policy is ${policy.toLowerCase()}` }
+}
+
 module.exports = {
   disk_encryption_status,
   firewall_status,
@@ -311,5 +381,12 @@ module.exports = {
   startup_items,
   secure_boot_status,
   guest_accounts,
-  browser_extensions
+  browser_extensions,
+  dns_servers,
+  wifi_networks,
+  backup_status,
+  usb_autoplay,
+  script_policy,
+  ssh_keys,
+  hosts_file
 }
