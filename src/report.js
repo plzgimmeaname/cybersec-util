@@ -13,7 +13,7 @@ function toHtml (report) {
 
   const checks = report.results.map(r => `
     <section class="check ${esc(r.state)}">
-      <h3><span class="dot"></span>${esc(r.title)} <small>${esc(STATE[r.state] || r.state)} · ${esc(r.severity)}</small></h3>
+      <h3><span class="dot"></span>${esc(r.title)} <small>${esc(r.ignored && r.state !== 'pass' ? 'ignored' : STATE[r.state] || r.state)} · ${esc(r.severity)}</small></h3>
       <p>${esc(r.detail)}</p>
       ${r.items && r.items.length ? `<ul class="things">${r.items.map(i => `<li class="${i.flag ? 'flag' : ''}">${esc(i.text)}${i.note ? ` <em>${esc(i.note)}</em>` : ''}</li>`).join('')}</ul>` : ''}
       ${r.state !== 'pass' && r.fix.length ? `<p class="label">how to fix</p><ol>${r.fix.map(f => `<li>${esc(f)}</li>`).join('')}</ol>` : ''}
@@ -47,7 +47,7 @@ function toHtml (report) {
   <h1>security checkup</h1>
   <p class="muted">${esc(report.host)} · ${esc(report.os)} · ${esc(when)}</p>
   <div class="score"><div class="num">${report.score ?? '–'}</div>
-    <div>${report.results.filter(r => r.state === 'pass').length} ok · ${report.results.filter(r => r.state === 'fail').length} to fix</div></div>
+    <div>${report.results.filter(r => r.state === 'pass').length} ok · ${report.results.filter(r => r.state === 'fail' && !r.ignored).length} to fix</div></div>
   ${drift}
   <h2>checks</h2>
   ${checks}

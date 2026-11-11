@@ -73,12 +73,13 @@ async function runCheck (check, probes, os) {
   }
 }
 
-// 0-100, only pass and fail count
-function score (results) {
+// 0-100, only pass and fail count, ignored checks don't
+function score (results, ignored = new Set()) {
   let total = 0
   let lost = 0
   for (const r of results) {
     if (r.state !== 'pass' && r.state !== 'fail') continue
+    if (ignored.has(r.id)) continue
     const w = weights[r.severity] || 0
     total += w
     if (r.state === 'fail') lost += w
@@ -101,11 +102,22 @@ async function run (onProgress = () => {}) {
     return r
   }))
 
-  results.sort((a, b) =>
-    stateOrder.indexOf(a.state) - stateOrder.indexOf(b.state) ||
-    severityOrder.indexOf(a.severity) - severityOrder.indexOf(b.severity))
-
-  return { os, score: score(results), results, time: new Date().toISOString() }
+  return { os, score: score(results), results: sort(results), time: new Date().toISOString() }
 }
 
-module.exports = { platform, run, loadChecks, score, linkFor }
+function sort (results) {
+  return results.sort((a, b) =>
+    stateOrder.indexOf(a.state) - stateOrder.indexOf(b.state) ||
+    severityOrder.indexOf(a.severity) - severityOrder.indexOf(b.severity))
+}
+
+// runs a single check again, for "check again" after a fix
+async function runOne (id) {
+  const os = platform()
+  if (!probeModules[os]) return null
+  const check = loadChecks().find(c => c.id === id && (c.platforms || []).includes(os))
+  if (!check) return null
+  return runCheck(check, { ...require('./probes/software'), ...probeModules[os]() }, os)
+}
+
+module.exports = { platform, run, runOne, loadChecks, score, sort, linkFor }

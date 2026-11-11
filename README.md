@@ -60,14 +60,25 @@ On the left side there are 5 pages:
 - **Checks:** every check. Click one to see what was found and how to fix it.
 - **Changes:** what is new or gone since last time.
 - **History:** your score over time.
-- **About & privacy:** what the app reads and what it sends.
+- **Settings:** light or dark look, reminders, and what the app reads and sends.
 
 ### Fix something
 
 Many problems have an **Open settings** button. Click it. The right settings page opens for you.
 Then follow the steps under **How to fix**.
 
-When you are done, click **Run again** to see your new score.
+When you are done, click **Check again**. It checks only that one thing, so it is fast.
+
+Other buttons under each problem:
+
+- **Copy steps:** copies the fix steps, so you can paste them somewhere.
+- **Ignore this check:** use this if you know about the problem and are okay with it. It stops counting toward your score. You can undo it in **Settings**.
+
+To find a check fast, press `Cmd + F` (Mac) or `Ctrl + F` (Windows and Linux) and type.
+
+### Get a reminder
+
+Go to **Settings** and pick how often you want a reminder. When it is time, the app tells you on the first page.
 
 ### Save your results
 

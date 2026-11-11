@@ -11,5 +11,8 @@ contextBridge.exposeInMainWorld('checkup', {
   openData: () => ipcRenderer.invoke('open-data'),
   save: format => ipcRenderer.invoke('save', format === 'json' ? 'json' : 'html'),
   reveal: () => ipcRenderer.invoke('reveal'),
+  recheck: id => ipcRenderer.invoke('recheck', String(id)),
+  ignore: (id, on) => ipcRenderer.invoke('ignore', String(id), !!on),
+  setSettings: patch => ipcRenderer.invoke('settings', patch),
   onProgress: cb => ipcRenderer.on('progress', (_, p) => cb(p))
 })

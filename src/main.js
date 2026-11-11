@@ -5,6 +5,7 @@ const os = require('os')
 const engine = require('./engine')
 const history = require('./history')
 const report = require('./report')
+const settings = require('./settings')
 
 // history, baseline and the nvd cache live in the app's own data folder
 const dataDir = app.getPath('userData')
@@ -24,9 +25,10 @@ function createWindow () {
     title: 'Security Checkup',
     show: false,
     icon: iconPath,
-    // mac gets the modern inset traffic lights over the sidebar
-    ...(mac ? { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 18, y: 18 } } : {}),
-    backgroundColor: nativeTheme.shouldUseDarkColors ? '#111214' : '#f6f6f7',
+    // mac gets inset traffic lights and the real sidebar material behind the nav
+    ...(mac
+      ? { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 18, y: 18 }, vibrancy: 'sidebar', visualEffectState: 'followWindow' }
+      : { backgroundColor: nativeTheme.shouldUseDarkColors ? '#111214' : '#f6f6f7' }),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -44,6 +46,14 @@ function createWindow () {
   win.loadFile(path.join(__dirname, '..', 'ui', 'index.html'))
 }
 
+// ignored checks stay in the list but don't count toward the score
+function applyIgnored (r) {
+  const ignored = new Set(Object.keys(settings.load(dataDir).ignored))
+  for (const x of r.results) x.ignored = ignored.has(x.id)
+  r.score = engine.score(r.results, ignored)
+  return r
+}
+
 ipcMain.handle('info', () => ({
   host: os.hostname(),
   os: engine.platform(),
@@ -51,7 +61,8 @@ ipcMain.handle('info', () => ({
   version: app.getVersion(),
   mac,
   checks: engine.loadChecks().filter(c => (c.platforms || []).includes(engine.platform())).length,
-  hasHistory: history.list(dataDir).length > 0
+  lastTime: (history.list(dataDir)[0] || {}).time || null,
+  settings: settings.load(dataDir)
 }))
 
 ipcMain.handle('scan', async e => {
@@ -59,9 +70,33 @@ ipcMain.handle('scan', async e => {
     if (!e.sender.isDestroyed()) e.sender.send('progress', p)
   })
   r.host = os.hostname()
+  applyIgnored(r)
   try { r.drift = history.record(dataDir, r) } catch (err) { r.drift = { error: err.message, changes: [], trend: [] } }
   last = r
   return r
+})
+
+// one check again after a fix, the saved history stays as it was
+ipcMain.handle('recheck', async (e, id) => {
+  if (!last) return null
+  const fresh = await engine.runOne(String(id))
+  if (!fresh) return null
+  last.results = engine.sort(last.results.map(x => x.id === fresh.id ? fresh : x))
+  return applyIgnored(last)
+})
+
+ipcMain.handle('ignore', (e, id, on) => {
+  const check = engine.loadChecks().find(c => c.id === String(id))
+  if (!check) return null
+  const s = settings.ignore(dataDir, check.id, !!on, check.title)
+  if (last) applyIgnored(last)
+  return { settings: s, report: last }
+})
+
+ipcMain.handle('settings', (e, patch) => {
+  const s = settings.update(dataDir, patch && typeof patch === 'object' ? patch : {})
+  nativeTheme.themeSource = s.theme
+  return s
 })
 
 // "these changes are fine"
@@ -115,6 +150,7 @@ ipcMain.handle('reveal', () => {
 })
 
 app.whenReady().then(() => {
+  nativeTheme.themeSource = settings.load(dataDir).theme
   // dock icon while running with npm start
   if (mac && app.dock && fs.existsSync(iconPath)) app.dock.setIcon(iconPath)
   createWindow()

@@ -23,7 +23,7 @@
         <button class="nav-item" data-view="checks"><span data-icon="list"></span>Checks<span class="badge" id="badge-checks" hidden></span></button>
         <button class="nav-item" data-view="changes"><span data-icon="changes"></span>Changes<span class="badge" id="badge-changes" hidden></span></button>
         <button class="nav-item" data-view="history"><span data-icon="clock"></span>History</button>
-        <button class="nav-item" data-view="about"><span data-icon="info"></span>About &amp; privacy</button>
+        <button class="nav-item" data-view="settings"><span data-icon="gear"></span>Settings</button>
       </nav>
 
       <div class="sidebar-foot">
@@ -64,6 +64,7 @@
               <li><span data-icon="clock"></span><div><b>About a minute</b><span><span id="check-count">20</span> checks, most finish in seconds.</span></div></li>
               <li><span data-icon="lock"></span><div><b>Stays private</b><span>Results are saved only on this computer.</span></div></li>
             </ul>
+            <p id="welcome-last" class="welcome-last" hidden></p>
             <button class="btn primary big" data-action="scan">Run your first checkup</button>
           </div>
 
@@ -103,8 +104,8 @@
               <button class="btn small" data-go="changes">Review</button>
             </div>
 
-            <div class="section-head"><h3>Fix these first</h3><button class="link" data-go="checks" data-filter="attention">See all issues</button></div>
-            <div id="top-fixes" class="stack"></div>
+            <div class="section-head"><h3>Fix these first</h3><button class="link" id="see-all" data-go="checks" data-filter="attention">See all issues</button></div>
+            <div id="top-fixes" class="card fix-list"></div>
 
             <div class="section-head"><h3>By area</h3></div>
             <div id="areas" class="areas"></div>
@@ -118,9 +119,14 @@
               <button data-filter="all" class="on">All</button>
               <button data-filter="attention">Needs attention</button>
               <button data-filter="passed">Passed</button>
+              <button data-filter="ignored" id="filter-ignored" hidden>Ignored</button>
             </div>
-            <div class="chips" id="area-chips"></div>
+            <label class="search">
+              <span data-icon="search"></span>
+              <input id="search" type="search" placeholder="Search checks" autocomplete="off" spellcheck="false">
+            </label>
           </div>
+          <div class="chips" id="area-chips"></div>
           <div id="check-groups"></div>
           <div id="checks-empty" class="empty card" hidden>
             <span data-icon="list"></span>
@@ -150,7 +156,7 @@
             <svg id="chart" class="chart" viewBox="0 0 640 200" role="img" aria-label="Score history chart"></svg>
             <p id="chart-empty" class="muted" hidden>Run a few checkups to see your score over time.</p>
           </div>
-          <div class="section-head"><h3>Past checkups</h3><button class="link danger" id="reset">Clear history</button></div>
+          <div class="section-head"><h3>Past checkups</h3></div>
           <div class="card">
             <table class="table">
               <thead><tr><th>Date</th><th>Score</th><th>Issues</th></tr></thead>
@@ -159,39 +165,68 @@
           </div>
         </section>
 
-        <!-- about -->
-        <section class="view" id="view-about" hidden>
-          <div class="card pad about-head">
-            <span class="logo big" data-icon="shield"></span>
-            <div>
-              <h2>Security Checkup</h2>
-              <p class="muted">Version <span id="version">–</span> · checks follow CIS Controls v8 and NIST SP 800-53</p>
+        <!-- settings -->
+        <section class="view" id="view-settings" hidden>
+          <div class="card settings">
+            <div class="setting">
+              <div>
+                <p class="setting-name">Appearance</p>
+                <p class="muted small">Follow your computer, or pick one.</p>
+              </div>
+              <div class="segmented" id="theme">
+                <button data-theme="system">System</button>
+                <button data-theme="light">Light</button>
+                <button data-theme="dark">Dark</button>
+              </div>
+            </div>
+            <div class="setting">
+              <div>
+                <p class="setting-name">Checkup reminder</p>
+                <p class="muted small">Shows a note when it's time for a new checkup.</p>
+              </div>
+              <div class="segmented" id="remind">
+                <button data-remind="0">Off</button>
+                <button data-remind="7">Weekly</button>
+                <button data-remind="14">2 weeks</button>
+                <button data-remind="30">Monthly</button>
+              </div>
+            </div>
+            <div class="setting column">
+              <div>
+                <p class="setting-name">Ignored checks</p>
+                <p class="muted small">These still show up, but don't count toward your score.</p>
+              </div>
+              <ul id="ignored-list" class="things"></ul>
+              <p id="ignored-empty" class="muted small">You haven't ignored any checks.</p>
+            </div>
+            <div class="setting">
+              <div>
+                <p class="setting-name">Your data</p>
+                <p class="muted small">Past checkups are saved on this computer only.</p>
+              </div>
+              <div class="btn-row">
+                <button class="btn small" id="open-data"><span data-icon="folder"></span>Open folder</button>
+                <button class="btn small danger" id="reset">Clear history</button>
+              </div>
             </div>
           </div>
 
-          <div class="grid2">
+          <div class="section-head"><h3>Privacy</h3></div>
+          <div class="grid2 tight">
             <div class="card pad">
-              <h3>What it reads</h3>
-              <p class="muted">Settings and lists on this computer: security settings, app names and versions, startup items, accounts, browser add-on names, and network settings. It never reads your documents, passwords or browsing history, and it never changes anything.</p>
+              <p class="setting-name"><span data-icon="eye"></span>What it reads</p>
+              <p class="muted small">Settings and lists on this computer: security settings, app names and versions, startup items, accounts, browser add-on names, and network settings. It never reads your documents, passwords or browsing history, and it never changes anything.</p>
             </div>
             <div class="card pad">
-              <h3>What goes online</h3>
-              <p class="muted">Only two things. The update check asks Apple, Microsoft or your Linux system if updates are waiting. The unsafe-versions check sends app names and version numbers (like "chrome 141") to nvd.nist.gov, the U.S. government's vulnerability list.</p>
+              <p class="setting-name"><span data-icon="network"></span>What goes online</p>
+              <p class="muted small">Only two things. The update check asks Apple, Microsoft or your Linux system if updates are waiting. The unsafe-versions check sends app names and version numbers (like "chrome 141") to nvd.nist.gov, the U.S. government's vulnerability list.</p>
             </div>
-            <div class="card pad">
-              <h3>Your data</h3>
-              <p class="muted">Past checkups are saved on this computer only, so you can see what changed.</p>
-              <div class="btn-row">
-                <button class="btn small" id="open-data"><span data-icon="folder"></span>Open data folder</button>
-              </div>
-            </div>
-            <div class="card pad">
-              <h3>Shortcuts</h3>
-              <dl class="keys">
-                <dt><kbd class="mod">Ctrl</kbd> <kbd>R</kbd></dt><dd>Run a checkup</dd>
-                <dt><kbd class="mod">Ctrl</kbd> <kbd>1</kbd>–<kbd>5</kbd></dt><dd>Switch pages</dd>
-              </dl>
-            </div>
+          </div>
+
+          <div class="about">
+            <span class="logo" data-icon="shield"></span>
+            <p class="muted small">Security Checkup <span id="version">–</span> · checks follow CIS Controls v8 and NIST SP 800-53</p>
+            <p class="muted small keys"><kbd class="mod">Ctrl</kbd><kbd>R</kbd> checkup &nbsp; <kbd class="mod">Ctrl</kbd><kbd>F</kbd> search &nbsp; <kbd class="mod">Ctrl</kbd><kbd>1</kbd>–<kbd>5</kbd> pages</p>
           </div>
         </section>
       </main>
