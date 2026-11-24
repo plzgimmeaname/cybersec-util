@@ -1,0 +1,21 @@
+# web page tampering
+id: http-integrity
+title: "Web page tampering"
+category: network
+why: "Public Wi-Fi and some providers rewrite plain web pages to insert ads or malware, or block them behind a login page."
+platforms: [windows, macos, linux]
+severity: medium
+probe: http_integrity
+expect:
+  status: "clean"
+benchmark: NIST SC-8 · MITRE T1557
+fix:
+  macos:
+    - "If a sign-in page opened, finish it, then check again."
+    - "Otherwise leave this network or turn on a VPN."
+  windows:
+    - "If a sign-in page opened, finish it, then check again."
+    - "Otherwise leave this network or turn on a VPN."
+  linux:
+    - "If a sign-in page opened, finish it, then check again."
+    - "Otherwise leave this network or turn on a VPN."

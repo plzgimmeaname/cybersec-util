@@ -2,7 +2,7 @@
 
 This app checks if your computer is safe. If something is wrong, it tells you how to fix it.
 
-It works on Mac, Windows and Linux. It only looks. It does not change anything.
+It works on Mac, Windows and Linux. A checkup only looks. If a problem has a **Fix it for me** button, the app changes that one setting, but only after you approve it in a pop-up (and your computer asks for your password when it needs to).
 
 ---
 
@@ -54,9 +54,10 @@ The app opens. Click **Run checkup**. It takes about a minute.
 
 ### Find your way around
 
-On the left side there are 5 pages:
+On the left side there are 6 pages:
 
-- **Overview:** your score out of 100, and the 3 most important things to fix.
+- **Overview:** your score out of 100, one-click fixes, and the 3 most important things to fix.
+- **Network:** tests of your DNS, secure connections, router, proxy, open ports and what is talking to the internet.
 - **Checks:** every check. Click one to see what was found and how to fix it.
 - **Changes:** what is new or gone since last time.
 - **History:** your score over time.
@@ -155,9 +156,23 @@ Your computer may say it does not know who made the app. That is okay.
 
 ---
 
+## New in this version
+
+- [x] Network tests: DNS honesty, fake secure-site certificates, tampered web pages, ARP impostors, UPnP, risky open ports, proxies, clock, apps talking out
+- [x] Threat hunting: odd running programs, terminal startup files, scheduled jobs, extra trusted certificate authorities
+- [x] Account checks: saved login files, admin accounts, automatic sign-in, SSH server settings, recent remote sign-ins
+- [x] Linux kernel settings, Windows SMBv1 and UAC, Find My Mac
+- [x] One-click fixes (and **Fix all**) with a fix log in Settings
+
+Fixes are tested on macOS. The Windows and Linux ones are written but have not been run on those systems yet.
+
+---
+
 ## What it sends over the internet
 
-Almost nothing. It only reads your computer.
+Only what the network tests need. No personal data.
+
+- **Network tests:** read the certificates of google.com, github.com, cloudflare.com and microsoft.com, fetch tiny test pages from detectportal.firefox.com and captive.apple.com, look up a few made-up names, ask Cloudflare for the time, and look for routers on your local network. It also connects to your own computer's address to see which risky ports are open. You can skip slow checks in Settings.
 
 - **Updates check:** asks Apple, Microsoft or your Linux system if updates are waiting. Same as clicking "check for updates".
 - **Old apps check:** sends app names and version numbers (like "chrome 140") to **nvd.nist.gov**, a free U.S. government list of security holes. Nothing else is sent. Answers are saved for one day.

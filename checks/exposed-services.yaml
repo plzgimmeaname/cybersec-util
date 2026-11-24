@@ -1,0 +1,26 @@
+# risky services reachable
+id: exposed-services
+title: "Risky services reachable"
+category: network
+why: "Databases, remote desktops and old file sharing should never answer to the whole network. These are the ports attackers try first."
+platforms: [windows, macos, linux]
+severity: critical
+probe: exposed_services
+expect:
+  status: "closed"
+benchmark: CIS 4.8 · NIST CM-7 · MITRE T1046
+open:
+  macos: x-apple.systempreferences:com.apple.Network-Settings.extension
+  windows: ms-settings:windowsdefender
+fix:
+  macos:
+    - "Open System Settings → General → Sharing and turn off what you do not use."
+    - "For databases and Docker, bind them to 127.0.0.1 in their settings."
+    - "Turn on the firewall."
+  windows:
+    - "Close or uninstall the service named above, or set it to listen on 127.0.0.1 only."
+    - "Turn on the firewall for every profile."
+  linux:
+    - "Stop it: sudo systemctl disable --now <name>"
+    - "Or set it to listen on 127.0.0.1 only in its config file."
+    - "Turn on the firewall: sudo ufw enable"

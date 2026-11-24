@@ -1,0 +1,23 @@
+# clock accuracy
+id: clock-sync
+title: "Clock accuracy"
+category: network
+why: "A wrong clock makes secure sites fail, breaks two-step codes, and ruins the timeline when you look back at an incident."
+platforms: [windows, macos, linux]
+severity: low
+probe: clock_sync
+expect:
+  status: "ok"
+benchmark: CIS 8.4 · NIST AU-8
+open:
+  macos: x-apple.systempreferences:com.apple.Date-Time-Settings.extension
+  windows: ms-settings:dateandtime
+fix:
+  macos:
+    - "Open System Settings → General → Date & Time."
+    - "Turn on \"Set time and date automatically\"."
+  windows:
+    - "Open Settings → Time & language → Date & time."
+    - "Turn on \"Set time automatically\", then click Sync now."
+  linux:
+    - "Type timedatectl set-ntp true in the terminal."

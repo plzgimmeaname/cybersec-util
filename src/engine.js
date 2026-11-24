@@ -7,6 +7,8 @@ const weights = { low: 5, medium: 15, high: 25, critical: 40 }
 const severityOrder = ['critical', 'high', 'medium', 'low']
 const stateOrder = ['fail', 'unknown', 'info', 'pass']
 
+const fixes = require('./fixes')
+
 const probeModules = {
   macos: () => require('./probes/macos'),
   windows: () => require('./probes/windows'),
@@ -48,7 +50,19 @@ function matches (actual, expect) {
   return Object.entries(expect || {}).every(([k, v]) => actual[k] === v)
 }
 
+// shared probes work the same everywhere, the os file can override them
+const allProbes = os => ({ ...require('./probes/software'), ...require('./probes/network'), ...require('./probes/local'), ...probeModules[os]() })
+
+const HARD_LIMIT = 240000 // no single check may stall a scan
+
 async function runCheck (check, probes, os) {
+  const started = Date.now()
+  const r = await runCheckInner(check, probes, os)
+  r.ms = Date.now() - started
+  return r
+}
+
+async function runCheckInner (check, probes, os) {
   const base = {
     id: check.id,
     title: check.title,
@@ -56,15 +70,17 @@ async function runCheck (check, probes, os) {
     severity: check.severity,
     benchmark: check.benchmark,
     category: check.category || 'other',
+    slow: !!check.slow,
     settings: !!settingsLink(check, os),
-    fix: (check.fix && check.fix[os]) || []
+    fix: (check.fix && check.fix[os]) || [],
+    autofix: fixes.info(os, check.id)
   }
   if (check.broken) return { ...base, state: 'unknown', detail: check.broken }
   const probe = probes[check.probe]
   if (!probe) return { ...base, state: 'unknown', detail: 'no probe for this os yet' }
 
   try {
-    const actual = await probe()
+    const actual = await Promise.race([probe(), new Promise((_, rej) => setTimeout(() => rej(new Error('this check took too long and was stopped')), HARD_LIMIT))])
     // unknown and info are reported but never scored
     if (actual.status === 'unknown' || actual.status === 'info') return { ...base, state: actual.status, detail: actual.detail, items: actual.items || [] }
     return { ...base, state: matches(actual, check.expect) ? 'pass' : 'fail', detail: actual.detail, items: actual.items || [] }
@@ -88,14 +104,13 @@ function score (results, ignored = new Set()) {
 }
 
 // onProgress gets the full list first, then each check as it finishes
-async function run (onProgress = () => {}) {
+async function run (onProgress = () => {}, { quick = false } = {}) {
   const os = platform()
   if (!probeModules[os]) return { os, score: null, results: [], time: new Date().toISOString() }
 
-  // shared probes work the same everywhere, the os file can override them
-  const probes = { ...require('./probes/software'), ...probeModules[os]() }
-  const checks = loadChecks().filter(c => (c.platforms || []).includes(os))
-  onProgress({ type: 'start', checks: checks.map(c => ({ id: c.id, title: c.title })) })
+  const probes = allProbes(os)
+  const checks = loadChecks().filter(c => (c.platforms || []).includes(os) && !(quick && c.slow))
+  onProgress({ type: 'start', checks: checks.map(c => ({ id: c.id, title: c.title, category: c.category || 'other' })) })
   const results = await Promise.all(checks.map(async c => {
     const r = await runCheck(c, probes, os)
     onProgress({ type: 'done', id: r.id, state: r.state, severity: r.severity })
@@ -117,7 +132,7 @@ async function runOne (id) {
   if (!probeModules[os]) return null
   const check = loadChecks().find(c => c.id === id && (c.platforms || []).includes(os))
   if (!check) return null
-  return runCheck(check, { ...require('./probes/software'), ...probeModules[os]() }, os)
+  return runCheck(check, allProbes(os), os)
 }
 
 module.exports = { platform, run, runOne, loadChecks, score, sort, linkFor }

@@ -144,4 +144,15 @@ function hosts_file () {
     : { status: 'clean', detail: 'only local or blocking entries', items }
 }
 
-module.exports = { ssh_keys, hosts_file, judgeDns, isPrivate }
+// a program running from a temp or hidden folder. developer tools keep helpers in dot folders
+// (~/.nvm, ~/.cargo, ...), so a dot folder only counts when it isn't a bin / node_modules / lib tree
+const TEMP_RUN = /^(\/tmp\/|\/var\/tmp\/|\/dev\/shm\/|\/private\/tmp\/|\/private\/var\/tmp\/|\/Users\/Shared\/|\/var\/folders\/.*\/T\/)|\\AppData\\Local\\Temp\\|\\Users\\Public\\|\\Windows\\Temp\\|\\Downloads\\/i
+function oddPlace (p) {
+  p = String(p || '')
+  if (TEMP_RUN.test(p)) return true
+  const hidden = p.match(/\/\.[\w-]+\//)
+  if (!hidden) return false
+  return !/\/\.[\w-]+\/(?:.*\/)?(bin|node_modules|lib|libexec|sbin|app|apps|versions|toolchains|extensions)\//i.test(p)
+}
+
+module.exports = { oddPlace, ssh_keys, hosts_file, judgeDns, isPrivate }

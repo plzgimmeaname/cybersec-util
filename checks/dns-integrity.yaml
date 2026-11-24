@@ -1,0 +1,21 @@
+# dns honesty
+id: dns-integrity
+title: "DNS honesty"
+category: network
+why: "A dishonest DNS server can send you to fake websites. This asks it questions with known answers and sees if it lies."
+platforms: [windows, macos, linux]
+severity: high
+probe: dns_integrity
+expect:
+  status: "ok"
+benchmark: CIS 9.2 · NIST SC-20 · MITRE T1584.002
+fix:
+  macos:
+    - "Open System Settings → Network → your connection → Details → DNS."
+    - "Replace the servers with 1.1.1.1 and 9.9.9.9, or turn on a trusted VPN."
+  windows:
+    - "Open Settings → Network & internet → your connection → DNS server assignment → Edit."
+    - "Choose Manual and enter 1.1.1.1 and 9.9.9.9."
+  linux:
+    - "Open your network settings → IPv4 → DNS."
+    - "Turn Automatic off and enter 1.1.1.1 and 9.9.9.9."

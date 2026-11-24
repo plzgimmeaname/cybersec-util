@@ -6,6 +6,7 @@ const engine = require('./engine')
 const history = require('./history')
 const report = require('./report')
 const settings = require('./settings')
+const fixes = require('./fixes')
 
 // history, baseline and the nvd cache live in the app's own data folder
 const dataDir = app.getPath('userData')
@@ -68,7 +69,7 @@ ipcMain.handle('info', () => ({
 ipcMain.handle('scan', async e => {
   const r = await engine.run(p => {
     if (!e.sender.isDestroyed()) e.sender.send('progress', p)
-  })
+  }, { quick: settings.load(dataDir).quick })
   r.host = os.hostname()
   applyIgnored(r)
   try { r.drift = history.record(dataDir, r) } catch (err) { r.drift = { error: err.message, changes: [], trend: [] } }
@@ -84,6 +85,45 @@ ipcMain.handle('recheck', async (e, id) => {
   last.results = engine.sort(last.results.map(x => x.id === fresh.id ? fresh : x))
   return applyIgnored(last)
 })
+
+// fixes: the user confirms in a native dialog, then the report is refreshed with fresh results
+async function runFixes (e, ids) {
+  if (!last) return null
+  const osName = engine.platform()
+  const win = BrowserWindow.fromWebContents(e.sender)
+  const todo = ids.map(id => ({ id, info: fixes.info(osName, id), r: last.results.find(x => x.id === id) }))
+    .filter(x => x.info && x.r && x.r.state !== 'pass')
+  if (!todo.length) return { report: last, results: [] }
+
+  const admin = todo.some(x => x.info.admin)
+  const { response } = await dialog.showMessageBox(win, {
+    type: 'question',
+    buttons: ['Cancel', todo.length === 1 ? todo[0].info.label : `Fix ${todo.length} things`],
+    defaultId: 0,
+    cancelId: 0,
+    message: todo.length === 1 ? `${todo[0].info.label}?` : `Fix ${todo.length} things?`,
+    detail: todo.map(x => `• ${x.info.summary}\n   To undo: ${x.info.undo}`).join('\n\n') + (admin ? '\n\nYour computer will ask for your password or admin permission. This app never sees it.' : '')
+  })
+  if (response !== 1) return { report: last, cancelled: true, results: [] }
+
+  const out = await fixes.apply(osName, todo.map(x => x.id))
+  // the truth is what the check says afterwards, not what the command printed
+  const results = []
+  for (const x of todo) {
+    const fresh = await engine.runOne(x.id)
+    if (fresh) last.results = last.results.map(r => r.id === x.id ? fresh : r)
+    const fixed = !!fresh && fresh.state === 'pass'
+    const res = out[x.id] || { ok: false, message: 'no fix available' }
+    results.push({ id: x.id, title: x.r.title, label: x.info.label, fixed, ok: res.ok, message: res.message, cancelled: !!res.cancelled })
+  }
+  last.results = engine.sort(last.results)
+  fixes.addLog(dataDir, results.filter(x => !x.cancelled).map(x => ({ time: new Date().toISOString(), id: x.id, title: x.title, label: x.label, fixed: x.fixed, message: x.message })))
+  return { report: applyIgnored(last), results }
+}
+
+ipcMain.handle('fix', (e, id) => runFixes(e, [String(id)]))
+ipcMain.handle('fix-all', e => runFixes(e, last ? last.results.filter(r => r.state === 'fail' && !r.ignored && r.autofix).map(r => r.id) : []))
+ipcMain.handle('fix-log', () => fixes.readLog(dataDir))
 
 ipcMain.handle('ignore', (e, id, on) => {
   const check = engine.loadChecks().find(c => c.id === String(id))
@@ -128,6 +168,13 @@ ipcMain.handle('open-settings', (e, id) => {
   if (link) shell.openExternal(link)
   return !!link
 })
+
+// where this computer sits on the network, for the network page
+ipcMain.handle('netinfo', () => ({
+  host: os.hostname(),
+  interfaces: Object.entries(os.networkInterfaces()).flatMap(([name, list]) =>
+    (list || []).filter(a => !a.internal && a.family === 'IPv4' && !a.address.startsWith('169.254.')).map(a => ({ name, address: a.address, mac: a.mac })))
+}))
 
 ipcMain.handle('open-data', () => shell.openPath(dataDir))
 

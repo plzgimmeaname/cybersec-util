@@ -19,10 +19,14 @@
       </div>
 
       <nav class="nav" aria-label="Pages">
+        <p class="nav-label">Protect</p>
         <button class="nav-item active" data-view="overview"><span data-icon="grid"></span>Overview</button>
         <button class="nav-item" data-view="checks"><span data-icon="list"></span>Checks<span class="badge" id="badge-checks" hidden></span></button>
-        <button class="nav-item" data-view="changes"><span data-icon="changes"></span>Changes<span class="badge" id="badge-changes" hidden></span></button>
+        <button class="nav-item" data-view="network"><span data-icon="network"></span>Network<span class="badge" id="badge-network" hidden></span></button>
+        <p class="nav-label">Track</p>
+        <button class="nav-item" data-view="changes"><span data-icon="changes"></span>Changes<span class="badge neutral" id="badge-changes" hidden></span></button>
         <button class="nav-item" data-view="history"><span data-icon="clock"></span>History</button>
+        <p class="nav-label">App</p>
         <button class="nav-item" data-view="settings"><span data-icon="gear"></span>Settings</button>
       </nav>
 
@@ -40,6 +44,7 @@
           <p class="muted" id="page-sub">How secure this computer is right now</p>
         </div>
         <div class="actions">
+          <button id="fix-all" class="btn fix" hidden title="Fix everything that can be fixed automatically"><span data-icon="wand"></span><span id="fix-all-label">Fix all</span></button>
           <div class="menu-wrap">
             <button id="export" class="btn" disabled aria-haspopup="true" aria-expanded="false"><span data-icon="download"></span>Export</button>
             <div id="export-menu" class="menu" hidden>
@@ -58,10 +63,10 @@
           <div id="welcome" class="welcome card">
             <span class="welcome-icon" data-icon="shield"></span>
             <h2>Check how secure this computer is</h2>
-            <p class="muted">Security Checkup looks at the settings that matter most and tells you, in plain words, what to fix.</p>
+            <p class="muted">Security Checkup inspects your settings, your network and what's running, then tells you in plain words what to fix. Many fixes are one click.</p>
             <ul class="promises">
-              <li><span data-icon="eye"></span><div><b>Only looks</b><span>Nothing on your computer is changed.</span></div></li>
-              <li><span data-icon="clock"></span><div><b>About a minute</b><span><span id="check-count">20</span> checks, most finish in seconds.</span></div></li>
+              <li><span data-icon="eye"></span><div><b>Looks first</b><span>A checkup only reads. A fix runs only after you approve it.</span></div></li>
+              <li><span data-icon="clock"></span><div><b>About a minute</b><span><span id="check-count">20</span> checks across device, network and threats.</span></div></li>
               <li><span data-icon="lock"></span><div><b>Stays private</b><span>Results are saved only on this computer.</span></div></li>
             </ul>
             <p id="welcome-last" class="welcome-last" hidden></p>
@@ -72,14 +77,14 @@
             <div class="live-head">
               <div>
                 <h2>Checking this computer…</h2>
-                <p class="muted"><span id="live-count">0</span> of <span id="live-total">0</span> done · checking updates online can take a minute</p>
+                <p class="muted"><span id="live-count">0</span> of <span id="live-total">0</span> done · online checks can take a minute</p>
               </div>
             </div>
             <ul id="live-list" class="live-list"></ul>
           </div>
 
           <div id="results" hidden>
-            <div class="hero card">
+            <div class="hero card" id="hero">
               <div class="ring-wrap">
                 <svg class="ring" viewBox="0 0 64 64" aria-hidden="true">
                   <circle class="track" cx="32" cy="32" r="28"></circle>
@@ -98,10 +103,18 @@
               </div>
             </div>
 
+            <div id="stats" class="stats"></div>
+
             <div id="drift-banner" class="banner" hidden>
               <span data-icon="changes"></span>
               <p id="drift-banner-text"></p>
               <button class="btn small" data-go="changes">Review</button>
+            </div>
+
+            <div id="quick" class="quick" hidden>
+              <span class="quick-icon" data-icon="wand"></span>
+              <div class="quick-text"><b id="quick-title"></b><span id="quick-sub" class="muted"></span></div>
+              <button class="btn fix" id="quick-btn"><span data-icon="wand"></span>Fix them</button>
             </div>
 
             <div class="section-head"><h3>Fix these first</h3><button class="link" id="see-all" data-go="checks" data-filter="attention">See all issues</button></div>
@@ -132,6 +145,20 @@
             <span data-icon="list"></span>
             <p>Run a checkup to see the results here.</p>
           </div>
+        </section>
+
+        <!-- network -->
+        <section class="view" id="view-network" hidden>
+          <div class="card net-head">
+            <div class="net-ring" id="net-ring"><span id="net-score">–</span></div>
+            <div class="net-info">
+              <h2 id="net-title">Network health</h2>
+              <p class="muted" id="net-sub">Run a checkup to test this network.</p>
+              <div id="net-ifaces" class="counts"></div>
+            </div>
+          </div>
+          <div id="net-grid" class="net-grid"></div>
+          <p class="muted small note">These tests look at your DNS, secure connections, router and the services your computer exposes, the same things an attacker on your Wi-Fi would try first.</p>
         </section>
 
         <!-- changes -->
@@ -191,6 +218,13 @@
                 <button data-remind="30">Monthly</button>
               </div>
             </div>
+            <div class="setting">
+              <div>
+                <p class="setting-name">Skip slow checks</p>
+                <p class="muted small">Leaves out update and old-app lookups, which need the internet. A checkup then takes seconds.</p>
+              </div>
+              <button class="switch" id="quick-switch" role="switch" aria-checked="false" aria-label="Skip slow checks"><span></span></button>
+            </div>
             <div class="setting column">
               <div>
                 <p class="setting-name">Ignored checks</p>
@@ -211,22 +245,28 @@
             </div>
           </div>
 
+          <div class="section-head"><h3>Fix log</h3></div>
+          <div class="card">
+            <ul id="fix-log" class="log"></ul>
+            <p id="fix-log-empty" class="muted small pad">Nothing has been changed by this app yet.</p>
+          </div>
+
           <div class="section-head"><h3>Privacy</h3></div>
           <div class="grid2 tight">
             <div class="card pad">
               <p class="setting-name"><span data-icon="eye"></span>What it reads</p>
-              <p class="muted small">Settings and lists on this computer: security settings, app names and versions, startup items, accounts, browser add-on names, and network settings. It never reads your documents, passwords or browsing history, and it never changes anything.</p>
+              <p class="muted small">Settings and lists on this computer: security settings, app names and versions, startup items, accounts, browser add-on names, and network settings. It never reads your documents, passwords or browsing history. It only changes something when you press a fix button and approve it.</p>
             </div>
             <div class="card pad">
               <p class="setting-name"><span data-icon="network"></span>What goes online</p>
-              <p class="muted small">Only two things. The update check asks Apple, Microsoft or your Linux system if updates are waiting. The unsafe-versions check sends app names and version numbers (like "chrome 141") to nvd.nist.gov, the U.S. government's vulnerability list.</p>
+              <p class="muted small">Update checks ask Apple, Microsoft or your Linux system what is waiting. The unsafe-versions check sends app names and versions (like "chrome 141") to nvd.nist.gov. The network tests open secure connections to google.com, github.com, cloudflare.com and microsoft.com to read their certificates, fetch tiny test pages from detectportal.firefox.com and captive.apple.com, look up a few made-up names, ask Cloudflare for the time, and probe this computer's own address and your local network for routers. No personal data is sent.</p>
             </div>
           </div>
 
           <div class="about">
             <span class="logo" data-icon="shield"></span>
             <p class="muted small">Security Checkup <span id="version">–</span> · checks follow CIS Controls v8 and NIST SP 800-53</p>
-            <p class="muted small keys"><kbd class="mod">Ctrl</kbd><kbd>R</kbd> checkup &nbsp; <kbd class="mod">Ctrl</kbd><kbd>F</kbd> search &nbsp; <kbd class="mod">Ctrl</kbd><kbd>1</kbd>–<kbd>5</kbd> pages</p>
+            <p class="muted small keys"><kbd class="mod">Ctrl</kbd><kbd>R</kbd> checkup &nbsp; <kbd class="mod">Ctrl</kbd><kbd>F</kbd> search &nbsp; <kbd class="mod">Ctrl</kbd><kbd>1</kbd>–<kbd>6</kbd> pages</p>
           </div>
         </section>
       </main>

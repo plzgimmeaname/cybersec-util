@@ -1,0 +1,21 @@
+# router opens ports for apps (upnp)
+id: upnp
+title: "Router opens ports for apps (UPnP)"
+category: network
+why: "UPnP lets any app on your network, including malware, ask your router to open a door to the internet without asking you."
+platforms: [windows, macos, linux]
+severity: medium
+probe: upnp_exposure
+expect:
+  status: "off"
+benchmark: CIS 4.4 · NIST CM-7
+fix:
+  macos:
+    - "Open your router's settings page (often 192.168.1.1 or 192.168.0.1)."
+    - "Find \"UPnP\" and turn it off."
+  windows:
+    - "Open your router's settings page (often 192.168.1.1 or 192.168.0.1)."
+    - "Find \"UPnP\" and turn it off."
+  linux:
+    - "Open your router's settings page (often 192.168.1.1 or 192.168.0.1)."
+    - "Find \"UPnP\" and turn it off."

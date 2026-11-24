@@ -1,0 +1,20 @@
+# terminal startup files
+id: shell-persistence
+title: "Terminal startup files"
+category: threats
+why: "Every time you open a terminal, these files run. Malware hides a line in them to come back after you delete it."
+platforms: [macos, linux]
+severity: high
+probe: shell_persistence
+expect:
+  status: "clean"
+benchmark: MITRE T1546.004
+fix:
+  macos:
+    - "Open the file named above in a text editor and go to the line number."
+    - "If you did not add that line, delete it."
+    - "Run a malware scan."
+  linux:
+    - "Open the file named above in a text editor and go to the line number."
+    - "If you did not add that line, delete it."
+    - "Run a malware scan."

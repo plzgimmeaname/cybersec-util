@@ -1,0 +1,24 @@
+# traffic proxy
+id: proxy-settings
+title: "Traffic proxy"
+category: network
+why: "A proxy sits between you and the internet and can read or change everything. Malware sets one to spy on your browsing."
+platforms: [windows, macos, linux]
+severity: high
+probe: proxy_settings
+expect:
+  status: "none"
+benchmark: NIST SC-7 · MITRE T1090
+open:
+  macos: x-apple.systempreferences:com.apple.Network-Settings.extension
+  windows: ms-settings:network-proxy
+fix:
+  macos:
+    - "Open System Settings → Network → your connection → Details → Proxies."
+    - "Turn off every proxy you did not set up yourself."
+  windows:
+    - "Open Settings → Network & internet → Proxy."
+    - "Turn off \"Use a proxy server\" and \"Use setup script\" unless your work needs them."
+  linux:
+    - "Open your network settings → Network proxy and set it to Disabled."
+    - "Look in ~/.bashrc and /etc/environment for http_proxy lines you did not add."

@@ -1,0 +1,24 @@
+# network impostors
+id: arp-spoofing
+title: "Network impostors"
+category: network
+why: "On Wi-Fi, an attacker can pretend to be your router and sit between you and the internet (an ARP spoofing attack)."
+platforms: [windows, macos, linux]
+severity: high
+probe: arp_spoofing
+expect:
+  status: "ok"
+benchmark: NIST SC-7 · MITRE T1557.002
+fix:
+  macos:
+    - "Disconnect from this network right now."
+    - "Reconnect on another network or your phone hotspot and use a VPN."
+    - "Tell whoever runs the network."
+  windows:
+    - "Disconnect from this network right now."
+    - "Reconnect on another network or your phone hotspot and use a VPN."
+    - "Tell whoever runs the network."
+  linux:
+    - "Disconnect from this network right now."
+    - "Reconnect on another network or your phone hotspot and use a VPN."
+    - "Tell whoever runs the network."

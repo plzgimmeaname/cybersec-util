@@ -1,0 +1,24 @@
+# secure connections
+id: tls-interception
+title: "Secure connections"
+category: network
+why: "Some networks and programs swap the lock on secure websites so they can read your traffic. This checks if the locks on four big sites are real."
+platforms: [windows, macos, linux]
+severity: critical
+probe: tls_interception
+expect:
+  status: "clean"
+benchmark: NIST SC-8 · MITRE T1557
+fix:
+  macos:
+    - "If you are on a work or school network, this may be normal. Ask your IT team."
+    - "Otherwise leave this network and use your phone hotspot."
+    - "Open Keychain Access → System, and remove root certificates you do not recognize."
+  windows:
+    - "If you are on a work or school network, this may be normal. Ask your IT team."
+    - "Otherwise leave this network, then check antivirus \"HTTPS scanning\" and remove it if you do not want it."
+    - "Open certmgr.msc → Trusted Root and remove roots you do not recognize."
+  linux:
+    - "If you are on a work or school network, this may be normal. Ask your IT team."
+    - "Otherwise leave this network and use your phone hotspot."
+    - "Look in /usr/local/share/ca-certificates for roots you did not add."

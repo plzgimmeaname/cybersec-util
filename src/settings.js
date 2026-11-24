@@ -2,7 +2,7 @@
 const fs = require('fs')
 const path = require('path')
 
-const DEFAULTS = { theme: 'system', remindDays: 7, ignored: {} }
+const DEFAULTS = { theme: 'system', remindDays: 7, quick: false, ignored: {} }
 const THEMES = ['system', 'light', 'dark']
 const REMIND = [0, 7, 14, 30] // 0 = never
 
@@ -28,6 +28,7 @@ function update (base, patch) {
   const s = load(base)
   if (THEMES.includes(patch.theme)) s.theme = patch.theme
   if (REMIND.includes(patch.remindDays)) s.remindDays = patch.remindDays
+  if (typeof patch.quick === 'boolean') s.quick = patch.quick
   return save(base, s)
 }
 

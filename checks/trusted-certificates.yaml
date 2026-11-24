@@ -1,0 +1,18 @@
+# extra trusted authorities
+id: trusted-certificates
+title: "Extra trusted authorities"
+category: threats
+why: "A certificate authority you add can vouch for any website. Interceptors and some malware add their own."
+platforms: [macos, linux]
+severity: medium
+probe: trusted_certificates
+expect:
+  status: "default"
+benchmark: NIST SC-17 · MITRE T1553.004
+fix:
+  macos:
+    - "Open Keychain Access and find the certificates named above."
+    - "If you did not add them (or your company did not), double-click → Trust → Never trust, or delete them."
+  linux:
+    - "Delete files you do not recognize from the folders named above."
+    - "Then type sudo update-ca-certificates --fresh"

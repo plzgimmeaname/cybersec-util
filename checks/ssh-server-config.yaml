@@ -1,0 +1,19 @@
+# ssh server settings
+id: ssh-server-config
+title: "SSH server settings"
+category: network
+why: "If the SSH server is on, weak settings let attackers guess passwords or log in as root."
+platforms: [macos, linux]
+severity: high
+probe: ssh_server_config
+expect:
+  status: "strong"
+benchmark: CIS 5.2 · NIST AC-17
+fix:
+  macos:
+    - "Safest: turn off Remote Login in System Settings → General → Sharing."
+    - "Otherwise edit /etc/ssh/sshd_config: PermitRootLogin no, PasswordAuthentication no."
+  linux:
+    - "Edit /etc/ssh/sshd_config: PermitRootLogin no, PasswordAuthentication no."
+    - "Then type sudo systemctl restart ssh"
+    - "Make sure your key works first, so you do not lock yourself out."

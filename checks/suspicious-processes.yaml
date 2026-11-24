@@ -1,0 +1,21 @@
+# programs in odd places
+id: suspicious-processes
+title: "Programs in odd places"
+category: threats
+why: "Normal apps live in the Applications or Program Files folders. Malware often runs from temporary or hidden folders."
+platforms: [windows, macos, linux]
+severity: high
+probe: suspicious_processes
+expect:
+  status: "clean"
+benchmark: NIST SI-3 · MITRE T1036
+fix:
+  macos:
+    - "Search for the name online. If it is not a tool you installed, quit it in Activity Monitor and delete its file."
+    - "Run a malware scan."
+  windows:
+    - "Search for the name online. If it is not a tool you installed, end it in Task Manager and delete its file."
+    - "Run a full scan in Windows Security."
+  linux:
+    - "Search for the name online. If it is not a tool you installed, kill it and delete its file."
+    - "Install and run a scanner such as clamav or rkhunter."

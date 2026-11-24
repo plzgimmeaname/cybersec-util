@@ -1,0 +1,18 @@
+# admin prompt (uac)
+id: uac
+title: "Admin prompt (UAC)"
+category: device
+why: "User Account Control stops programs from quietly getting admin rights."
+platforms: [windows]
+severity: high
+probe: uac
+expect:
+  status: "on"
+benchmark: CIS 2.3.17 · NIST AC-6
+open:
+  windows: ms-settings:windowsdefender
+fix:
+  windows:
+    - "Press Win, type \"Change User Account Control settings\" and open it."
+    - "Move the slider up to the second notch or higher."
+    - "Restart the computer."

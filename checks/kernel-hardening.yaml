@@ -1,0 +1,15 @@
+# kernel safety settings
+id: kernel-hardening
+title: "Kernel safety settings"
+category: device
+why: "These Linux settings make common attacks (memory guessing, spying on other programs, forged packets) harder."
+platforms: [linux]
+severity: medium
+probe: kernel_hardening
+expect:
+  status: "strong"
+benchmark: CIS 3.3 · NIST SI-16
+fix:
+  linux:
+    - "Click \"Fix it for me\" to turn them on and keep them on after restart."
+    - "Or add the settings to a file in /etc/sysctl.d/ and run sudo sysctl --system"

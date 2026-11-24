@@ -1,0 +1,16 @@
+# old file sharing (smbv1)
+id: smb1
+title: "Old file sharing (SMBv1)"
+category: network
+why: "SMBv1 is an old file sharing version with holes that ransomware like WannaCry used to spread."
+platforms: [windows]
+severity: high
+probe: smb1
+expect:
+  status: "off"
+benchmark: CIS 18.3.3 · MITRE T1210
+fix:
+  windows:
+    - "Open PowerShell as administrator."
+    - "Type Disable-WindowsOptionalFeature -Online -FeatureName SMB1Protocol and press Enter."
+    - "Restart the computer."

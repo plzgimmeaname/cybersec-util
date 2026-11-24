@@ -1,0 +1,16 @@
+# sign-ins from other computers
+id: recent-signins
+title: "Sign-ins from other computers"
+category: accounts
+why: "If someone signed in from another computer and it was not you, your account may be taken over."
+platforms: [macos, linux]
+severity: low
+probe: recent_signins
+expect:
+  status: "local"
+benchmark: NIST AU-6 · MITRE T1021
+fix:
+  macos:
+    - "If you do not recognize an address, change your password and turn off Remote Login."
+  linux:
+    - "If you do not recognize an address, change your password and check ~/.ssh/authorized_keys."

@@ -28,7 +28,10 @@ const ICONS = {
   accounts: 'M12 4a4 4 0 1 0 0 8 4 4 0 0 0 0-8z M4 21c0-4 3.6-6 8-6s8 2 8 6',
   alert: 'M12 3l10 18H2L12 3z M12 10v5 M12 18h.01',
   bulb: 'M9 18h6 M10 21h4 M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z',
-  chevron: 'M9 6l6 6-6 6'
+  chevron: 'M9 6l6 6-6 6',
+  wand: 'M15 4V2 M15 16v-2 M8 9h2 M20 9h2 M17.8 11.8L19 13 M17.8 6.2L19 5 M3 21l9-9 M12.2 6.2L11 5',
+  radar: 'M12 3a9 9 0 1 0 9 9 M12 7a5 5 0 1 0 5 5 M12 12l6-6 M12 11.5a.5.5 0 1 0 .01 0',
+  keyhole: 'M5 11h14v10H5z M8 11V7a4 4 0 0 1 8 0v4 M12 15v2'
 }
 
 const SVG = 'http://www.w3.org/2000/svg'
@@ -82,6 +85,7 @@ const AREAS = {
   apps: { name: 'Updates & apps', icon: 'apps' },
   network: { name: 'Network', icon: 'network' },
   accounts: { name: 'Accounts', icon: 'accounts' },
+  threats: { name: 'Threat hunting', icon: 'radar' },
   other: { name: 'Other', icon: 'list' }
 }
 const STATE = {
@@ -95,10 +99,13 @@ const SEV = { critical: 'Critical', high: 'High', medium: 'Medium', low: 'Low' }
 const PAGES = {
   overview: ['Overview', 'How secure this computer is right now'],
   checks: ['Checks', 'Every check, what was found and how to fix it'],
+  network: ['Network', 'How safe this network is, tested from your computer'],
   changes: ['Changes', 'What changed since your known-good checkup'],
   history: ['History', 'Your score over time'],
   settings: ['Settings', 'Preferences, ignored checks and privacy']
 }
+
+const NET_PAGE = r => r.category === 'network' || r.id === 'outbound-connections' || r.id === 'listening-ports'
 
 const state = { info: null, settings: null, report: null, view: 'overview', filter: 'all', area: 'all', query: '', open: new Set(), scanning: false }
 
@@ -117,7 +124,9 @@ function show (view) {
   $('#page-sub').textContent = PAGES[view][1]
   $('#main').scrollTo({ top: 0, behavior: 'instant' })
   if (view === 'history') renderHistory()
+  if (view === 'network') renderNetwork()
   if (view === 'settings') renderSettings()
+  syncFixAll()
 }
 
 // formatting
@@ -151,6 +160,7 @@ function verdict (score, fails) {
 async function scan () {
   if (state.scanning) return
   state.scanning = true
+  state.scanStart = Date.now()
   const btn = $('#scan')
   btn.disabled = true
   btn.classList.add('busy')
@@ -165,6 +175,7 @@ async function scan () {
 
   try {
     state.report = await window.checkup.scan()
+    state.report.took = Math.round((Date.now() - state.scanStart) / 1000)
     state.open.clear()
     render()
   } catch (e) {
@@ -228,7 +239,8 @@ function render ({ animate = true } = {}) {
   $('#results').hidden = false
   $('#export').disabled = false
 
-  // score ring
+  const tone = scoreColor(r.score)
+  $('#hero').className = `hero card ${tone}`
   const arc = $('#arc')
   arc.setAttribute('class', `arc ${scoreColor(r.score)}`)
   const target = 175.9 * (1 - (r.score ?? 0) / 100)
@@ -251,15 +263,22 @@ function render ({ animate = true } = {}) {
   if (ignored) counts.append(pill('', 'mute', `${ignored} ignored`))
   if (other) counts.append(pill('', 'dash', `${other} not scored`))
 
+  renderStats(results, fails, r)
+  renderQuick(fails)
   renderTrend(r.drift && r.drift.trend)
   renderDrift(r.drift)
   renderTopFixes(fails)
   renderAreas(results)
   renderChecks()
+  renderNetwork()
+  syncFixAll()
 
   const bc = $('#badge-checks')
   bc.hidden = !fails.length
   bc.textContent = fails.length
+  const nf = results.filter(x => NET_PAGE(x) && needsFix(x)).length
+  $('#badge-network').hidden = !nf
+  $('#badge-network').textContent = nf
   $('#last-run').textContent = `Last checked ${when(r.time)}`
 }
 
@@ -267,6 +286,132 @@ function pill (color, ic, text) {
   const p = el('span', `pill ${color}`)
   p.append(icon(ic), el('span', null, text))
   return p
+}
+
+
+function stat (cls, value, label) {
+  const d = el('div', `stat ${cls}`)
+  d.append(el('b', null, value), el('span', null, label))
+  return d
+}
+
+function renderStats (results, fails, r) {
+  const box = $('#stats')
+  box.replaceChildren()
+  const fixable = fails.filter(x => x.autofix).length
+  box.append(
+    stat('', results.length, 'checks ran'),
+    stat(fails.length ? 'bad' : 'good', fails.length, fails.length === 1 ? 'issue to fix' : 'issues to fix'),
+    stat('fixable', fixable, 'one-click fixes'),
+    stat('', r.took != null ? `${r.took}s` : '–', 'time taken')
+  )
+}
+
+const fixables = () => state.report ? state.report.results.filter(x => needsFix(x) && x.autofix) : []
+
+function renderQuick (fails) {
+  const list = fails.filter(x => x.autofix)
+  $('#quick').hidden = !list.length
+  if (!list.length) return
+  $('#quick-title').textContent = `${plural(list.length, 'issue')} can be fixed for you`
+  $('#quick-sub').textContent = list.map(x => x.title).slice(0, 4).join(' · ') + (list.length > 4 ? ` · +${list.length - 4} more` : '')
+}
+
+function syncFixAll () {
+  const n = fixables().length
+  const b = $('#fix-all')
+  b.hidden = !n || state.view === 'settings' || state.view === 'history'
+  $('#fix-all-label').textContent = n === 1 ? 'Fix 1 issue' : `Fix ${n} issues`
+}
+
+// every fix shows a native confirmation first, then the check runs again to prove it worked
+async function runFix (id, btn) {
+  if (state.fixing) return
+  state.fixing = true
+  if (btn) { btn.disabled = true; btn.classList.add('busy') }
+  try {
+    const res = await (id ? window.checkup.fix(id) : window.checkup.fixAll())
+    if (!res) throw new Error('not available')
+    if (res.report) { state.report = { ...res.report, took: state.report && state.report.took }; render({ animate: false }) }
+    if (res.cancelled) return
+    const done = res.results || []
+    const good = done.filter(x => x.fixed)
+    if (!done.length) toast('Nothing to fix', null, 'info')
+    else if (done.length === 1) {
+      const x = done[0]
+      if (x.fixed) toast(`${x.title} is fixed`)
+      else if (x.cancelled) toast('No permission was given, nothing changed', null, 'info')
+      else toast(`${x.title} still needs fixing${x.message ? `: ${x.message}` : ''}`, null, 'error')
+    } else {
+      toast(`${good.length} of ${done.length} fixed${good.length < done.length ? '. The rest need a manual step' : ''}`, null, good.length === done.length ? 'ok' : 'info')
+    }
+    if (state.view === 'settings') renderFixLog()
+  } catch (e) {
+    toast(`Couldn't run the fix: ${e.message}`, null, 'error')
+  } finally {
+    state.fixing = false
+    if (btn) { btn.disabled = false; btn.classList.remove('busy') }
+  }
+}
+
+function fixButton (r, cls = 'btn small fix') {
+  const b = button(cls, 'wand', r.autofix.label, (btn) => runFix(r.id, btn))
+  if (r.autofix.admin) {
+    const l = icon('lock')
+    l.classList.add('lock')
+    l.setAttribute('aria-label', 'asks for your password')
+    b.append(l)
+  }
+  b.title = `${r.autofix.summary}${r.autofix.admin ? ' Asks for your password.' : ''}`
+  return b
+}
+
+// network page: one card per network-related check
+async function renderNetwork () {
+  const r = state.report
+  const grid = $('#net-grid')
+  grid.replaceChildren()
+  const ifs = $('#net-ifaces')
+  ifs.replaceChildren()
+  try {
+    const info = await window.checkup.netInfo()
+    for (const i of info.interfaces.slice(0, 4)) ifs.append(pill('', 'network', `${i.address} · ${i.name}`))
+  } catch {}
+  if (!r) {
+    $('#net-score').textContent = '–'
+    $('#net-title').textContent = 'Network health'
+    $('#net-sub').textContent = 'Run a checkup to test this network.'
+    return
+  }
+  const mine = r.results.filter(NET_PAGE)
+  const scored = mine.filter(x => !x.ignored && (x.state === 'pass' || x.state === 'fail'))
+  const passed = scored.filter(x => x.state === 'pass').length
+  const pct = scored.length ? Math.round((passed / scored.length) * 100) : null
+  const ring = $('#net-ring')
+  ring.className = `net-ring ${scoreColor(pct)}`
+  ring.style.setProperty('--pct', pct ?? 0)
+  $('#net-score').textContent = pct ?? '–'
+  const bad = scored.length - passed
+  $('#net-title').textContent = bad ? `${plural(bad, 'network problem')} found` : 'This network looks safe'
+  $('#net-sub').textContent = `${passed} of ${scored.length} network tests passed`
+
+  for (const x of mine) {
+    const shown = shownState(x)
+    const s = STATE[shown] || STATE.unknown
+    const card = el('div', `net-card ${shown}`)
+    const top = el('div', 'net-top')
+    const dot = el('span', `status ${s.color}`)
+    dot.append(icon(s.icon))
+    top.append(dot, el('b', null, x.title), el('span', `sev ${x.severity}`, SEV[x.severity]))
+    card.append(top, el('p', null, cap(x.detail)))
+    if (needsFix(x)) {
+      const row = el('div', 'btn-row')
+      if (x.autofix) row.append(fixButton(x))
+      row.append(button('btn small ghost', 'chevron', 'Details', () => reveal(x.id)))
+      card.append(row)
+    }
+    grid.append(card)
+  }
 }
 
 function renderTrend (trend) {
@@ -347,7 +492,8 @@ function renderTopFixes (fails) {
     const text = el('span', 'fix-text')
     text.append(el('span', 'fix-title', r.title), el('span', 'fix-detail', cap(r.detail)))
     row.append(sev, text)
-    if (r.settings) row.append(settingsButton(r.id, 'btn small'))
+    if (r.autofix) row.append(fixButton(r))
+    else if (r.settings) row.append(settingsButton(r.id, 'btn small'))
     row.append(icon('chevron'))
     row.addEventListener('click', () => reveal(r.id))
     box.append(row)
@@ -469,7 +615,7 @@ function checkItem (r) {
   dot.append(icon(s.icon))
   const text = el('span', 'row-text')
   text.append(el('span', 'name', r.title), el('span', 'peek', shown === 'ignored' ? `Ignored · ${cap(r.detail)}` : cap(r.detail)))
-  row.append(dot, text, el('span', `sev ${r.severity}`, SEV[r.severity] || r.severity), el('span', 'chev'))
+  row.append(dot, text, ...(r.autofix && r.state === 'fail' && !r.ignored ? [el('span', 'tag', 'Auto-fix')] : []), el('span', `sev ${r.severity}`, SEV[r.severity] || r.severity), el('span', 'chev'))
   row.addEventListener('click', () => {
     const open = li.classList.toggle('open')
     row.setAttribute('aria-expanded', open)
@@ -493,7 +639,7 @@ function checkItem (r) {
   const fixable = r.state !== 'pass' && r.fix && r.fix.length
   if (fixable) {
     const fix = el('div')
-    fix.append(el('p', 'label', 'How to fix'))
+    fix.append(el('p', 'label', r.autofix ? 'Or fix it yourself' : 'How to fix'))
     const ol = el('ol', 'steps')
     for (const step of r.fix) ol.append(el('li', null, cap(step)))
     fix.append(ol)
@@ -503,12 +649,14 @@ function checkItem (r) {
   // actions: open settings, check again, copy steps, ignore
   const foot = el('div', 'body-foot')
   const left = el('div', 'btn-row')
-  if (r.settings && r.state !== 'pass') left.append(settingsButton(r.id, 'btn small primary'))
+  if (r.autofix && r.state !== 'pass') left.append(fixButton(r))
+  if (r.settings && r.state !== 'pass') left.append(settingsButton(r.id, r.autofix ? 'btn small' : 'btn small primary'))
   if (r.state !== 'pass') left.append(button('btn small', 'refresh', 'Check again', b => recheck(r.id, b)))
   if (fixable) left.append(button('btn small ghost', 'copy', 'Copy steps', () => copySteps(r)))
   const right = el('div', 'btn-row')
   if (r.ignored) right.append(button('link', null, 'Stop ignoring', () => setIgnored(r.id, false)))
   else if (r.state !== 'pass') right.append(button('link muted-link', null, 'Ignore this check', () => setIgnored(r.id, true)))
+  if (r.ms != null) right.append(el('span', 'ms', r.ms >= 1000 ? `${(r.ms / 1000).toFixed(1)}s` : `${r.ms}ms`))
   if (r.benchmark) right.append(el('span', 'bench', r.benchmark))
   foot.append(left, right)
   body.append(foot)
@@ -675,6 +823,8 @@ function renderSettings () {
   for (const b of $$('#theme button')) b.classList.toggle('on', b.dataset.theme === s.theme)
   for (const b of $$('#remind button')) b.classList.toggle('on', Number(b.dataset.remind) === s.remindDays)
 
+  $('#quick-switch').setAttribute('aria-checked', !!s.quick)
+  renderFixLog()
   const list = $('#ignored-list')
   list.replaceChildren()
   const entries = Object.entries(s.ignored)
@@ -685,6 +835,20 @@ function renderSettings () {
     li.append(el('span', 'mark'), el('span', 't', v.title || id), el('span', 'n', `since ${new Date(v.time).toLocaleDateString()}`))
     li.append(button('link', null, 'Stop ignoring', () => setIgnored(id, false)))
     list.append(li)
+  }
+}
+
+async function renderFixLog () {
+  const log = await window.checkup.fixLog()
+  const ul = $('#fix-log')
+  ul.replaceChildren()
+  $('#fix-log-empty').hidden = !!log.length
+  for (const e of log.slice(0, 12)) {
+    const li = el('li')
+    const dot = el('span', `status ${e.fixed ? 'green' : 'red'}`)
+    dot.append(icon(e.fixed ? 'check' : 'x'))
+    li.append(dot, el('span', null, `${e.label}${e.fixed ? '' : ` (did not work${e.message ? `: ${e.message}` : ''})`}`), el('span', 'when', when(e.time)))
+    ul.append(li)
   }
 }
 
@@ -872,6 +1036,10 @@ $('#search').addEventListener('keydown', e => { if (e.key === 'Escape') { e.targ
 for (const b of $$('#theme button')) b.addEventListener('click', () => saveSetting({ theme: b.dataset.theme }))
 for (const b of $$('#remind button')) b.addEventListener('click', () => saveSetting({ remindDays: Number(b.dataset.remind) }))
 
+$('#quick-switch').addEventListener('click', () => saveSetting({ quick: $('#quick-switch').getAttribute('aria-checked') !== 'true' }))
+$('#fix-all').addEventListener('click', e => runFix(null, e.currentTarget))
+$('#quick-btn').addEventListener('click', e => runFix(null, e.currentTarget))
+
 $('#scan').addEventListener('click', scan)
 for (const b of $$('[data-action="scan"]')) b.addEventListener('click', scan)
 
@@ -910,7 +1078,7 @@ document.addEventListener('keydown', e => {
     $('#search').select()
   }
   const n = Number(e.key)
-  if (n >= 1 && n <= 5) { e.preventDefault(); show(Object.keys(PAGES)[n - 1]) }
+  if (n >= 1 && n <= 6) { e.preventDefault(); show(Object.keys(PAGES)[n - 1]) }
 })
 
 // refresh "x min ago" now and then

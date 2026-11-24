@@ -1,0 +1,19 @@
+# scheduled jobs
+id: scheduled-tasks
+title: "Scheduled jobs"
+category: threats
+why: "Scheduled jobs run by themselves. Attackers use them to keep running after a restart."
+platforms: [windows, macos, linux]
+severity: medium
+probe: scheduled_tasks
+expect:
+  status: "clean"
+benchmark: CIS 2.5 · MITRE T1053
+fix:
+  macos:
+    - "Type crontab -e and delete lines you do not recognize."
+  windows:
+    - "Open Task Scheduler and delete tasks you do not recognize."
+  linux:
+    - "Type crontab -e and delete lines you do not recognize."
+    - "Look in /etc/cron.d for files you did not add."

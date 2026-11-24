@@ -4,6 +4,7 @@ title: Unsafe app versions
 category: apps
 why: Attackers look for these exact versions because they know how to break in.
 platforms: [windows, macos, linux]
+slow: true
 severity: high
 probe: vulnerable_software
 expect:

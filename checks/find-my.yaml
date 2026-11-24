@@ -1,0 +1,17 @@
+# find my mac
+id: find-my
+title: "Find My Mac"
+category: device
+why: "If this Mac is lost or stolen, Find My lets you lock it or erase it from afar."
+platforms: [macos]
+severity: low
+probe: find_my
+expect:
+  status: "on"
+benchmark: NIST MP-5
+open:
+  macos: x-apple.systempreferences:com.apple.systempreferences.AppleIDSettings
+fix:
+  macos:
+    - "Open System Settings → your name → iCloud."
+    - "Click Find My Mac and turn it on."

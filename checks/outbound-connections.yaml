@@ -1,0 +1,21 @@
+# apps talking to the internet
+id: outbound-connections
+title: "Apps talking to the internet"
+category: threats
+why: "Malware has to phone home. This lists which programs are connected right now, and flags odd ports and hidden programs."
+platforms: [windows, macos, linux]
+severity: medium
+probe: outbound_connections
+expect:
+  status: "quiet"
+benchmark: NIST SI-4 · MITRE T1071
+fix:
+  macos:
+    - "Look at the flagged programs. If you do not know one, search its name online."
+    - "Quit it from Activity Monitor and delete the file it runs from."
+  windows:
+    - "Look at the flagged programs. If you do not know one, search its name online."
+    - "End it in Task Manager, then run a full scan with Microsoft Defender."
+  linux:
+    - "Look at the flagged programs. If you do not know one, search its name online."
+    - "Stop it (kill <pid>) and delete the file it runs from."

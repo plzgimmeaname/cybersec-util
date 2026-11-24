@@ -1,0 +1,23 @@
+# admin accounts
+id: admin-accounts
+title: "Admin accounts"
+category: accounts
+why: "Every admin account is another way to take over the computer. Keep as few as you need."
+platforms: [windows, macos, linux]
+severity: low
+probe: admin_accounts
+expect:
+  status: "few"
+benchmark: CIS 5.4 · NIST AC-6
+open:
+  macos: x-apple.systempreferences:com.apple.Users-Groups-Settings.extension
+  windows: ms-settings:otherusers
+fix:
+  macos:
+    - "Open System Settings → Users & Groups."
+    - "Click the ⓘ next to accounts that do not need to be admin and turn off \"Allow this user to administer this computer\"."
+  windows:
+    - "Open Settings → Accounts → Other users."
+    - "Change accounts that do not need it to Standard user."
+  linux:
+    - "Remove accounts you do not need from the admin group: sudo gpasswd -d <name> sudo"

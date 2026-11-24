@@ -13,6 +13,10 @@ contextBridge.exposeInMainWorld('checkup', {
   reveal: () => ipcRenderer.invoke('reveal'),
   recheck: id => ipcRenderer.invoke('recheck', String(id)),
   ignore: (id, on) => ipcRenderer.invoke('ignore', String(id), !!on),
+  fix: id => ipcRenderer.invoke('fix', String(id)),
+  fixAll: () => ipcRenderer.invoke('fix-all'),
+  fixLog: () => ipcRenderer.invoke('fix-log'),
+  netInfo: () => ipcRenderer.invoke('netinfo'),
   setSettings: patch => ipcRenderer.invoke('settings', patch),
   onProgress: cb => ipcRenderer.on('progress', (_, p) => cb(p))
 })

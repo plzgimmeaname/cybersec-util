@@ -1,0 +1,23 @@
+# automatic sign-in
+id: auto-login
+title: "Automatic sign-in"
+category: accounts
+why: "With automatic sign-in, anyone who turns on this computer gets straight into your files."
+platforms: [windows, macos, linux]
+severity: high
+probe: auto_login
+expect:
+  status: "off"
+benchmark: CIS 5.5 · NIST IA-2
+open:
+  macos: x-apple.systempreferences:com.apple.Users-Groups-Settings.extension
+  windows: ms-settings:signinoptions
+fix:
+  macos:
+    - "Open System Settings → Users & Groups."
+    - "Set \"Automatically log in as\" to Off."
+  windows:
+    - "Press Win + R, type netplwiz and press Enter."
+    - "Check \"Users must enter a user name and password\"."
+  linux:
+    - "Open Settings → Users and turn off Automatic Login."

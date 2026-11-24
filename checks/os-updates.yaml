@@ -4,6 +4,7 @@ title: System updates
 category: apps
 why: Updates close security holes that attackers already know about.
 platforms: [windows, macos, linux]
+slow: true
 severity: high
 probe: os_updates_status
 expect:
